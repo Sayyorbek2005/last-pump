@@ -2,54 +2,58 @@
    🧱 ASOSIY STRUKTURA VA BANNER
    ========================================== */
 .katalog-light-wrapper {
-  padding: 16px 16px 32px 16px;
+  padding: 16px;
   width: 100%;
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background-color: #f8fafc; /* Och fon (oqqa yaqin) */
+  background-color: #f8fafc;
   min-height: 100vh;
 }
 
 .katalog-container-max {
   max-width: 1152px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .katalog-light-banner {
   background: #ffffff; 
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  padding: 24px 32px;
-  color: #1e293b; /* To'q qora/kulrang */
+  padding: 24px;
+  color: #1e293b;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .banner-left-info {
   text-align: left;
+  flex: 1;
+  min-width: 250px; /* Matn siqilib ketmasligi uchun */
 }
 
 .banner-icon-title {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .main-grid-icon {
   font-size: 26px;
-  color: #2563eb; /* Ko'k */
+  color: #2563eb;
 }
 
 .banner-left-info h1 {
-  font-size: 24px;
+  font-size: clamp(20px, 4vw, 24px); /* Ekran o'lchamiga qarab dinamik kattalashadi */
   font-weight: 700;
   margin: 0;
-  color: #0f172a; /* Qora */
+  color: #0f172a;
   letter-spacing: -0.025em;
 }
 
@@ -65,14 +69,16 @@
 .katalog-breadcrumbs {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  flex-wrap: wrap; /* Kichik ekranda pastga chiroyli tushishi uchun */
+  gap: 6px 10px;
+  font-size: 13px;
   font-weight: 500;
   color: #64748b;
   margin-bottom: 24px;
   background: #f1f5f9;
   padding: 12px 16px;
   border-radius: 12px;
+  word-break: break-word;
 }
 
 .breadcrumb-btn {
@@ -82,22 +88,23 @@
   color: #64748b;
   cursor: pointer;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .breadcrumb-btn:hover {
-  color: #2563eb; /* Ko'k */
+  color: #2563eb;
 }
 
 .breadcrumb-btn.active {
-  color: #2563eb; /* Ko'k */
+  color: #2563eb;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 .breadcrumb-current {
-  color: #0f172a; /* Qora */
+  color: #0f172a;
   font-weight: 600;
 }
 
@@ -111,86 +118,106 @@
 .section-divider {
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Kichik ekranda badge chetga suriladi */
+  flex-wrap: wrap;
   gap: 12px;
-  margin: 32px 0 20px 0;
+  margin: 24px 0 16px 0;
 }
 
 .section-divider h2 {
-  font-size: 18px;
+  font-size: clamp(16px, 3.5vw, 18px);
   font-weight: 700;
-  color: #0f172a; /* Qora */
+  color: #0f172a;
   margin: 0;
 }
 
 .badge-count {
-  background: #eff6ff; /* Och ko'k */
-  color: #2563eb; /* Ko'k */
+  background: #eff6ff;
+  color: #2563eb;
   font-size: 12px;
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 20px;
   border: 1px solid #bfdbfe;
+  white-space: nowrap;
 }
 
 .categories-light-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 24px;
+  /* 300pxgacha bo'lgan ekranlarda siqilmaslik uchun minmax 130pxga tushirildi */
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 16px;
 }
 
 .category-light-card {
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
-  border-radius: 24px;      
-  padding: 24px;
+  border-radius: 16px;      
+  padding: 16px;
   text-align: center;
   cursor: pointer;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
+@media (min-width: 480px) {
+  .categories-light-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+  }
+  .category-light-card {
+    padding: 24px;
+    border-radius: 24px;
+  }
+}
+
 .category-light-card:hover {
   transform: translateY(-4px);
-  border-color: #2563eb; /* Ko'k */
+  border-color: #2563eb;
   box-shadow: 0 12px 20px rgba(37, 99, 235, 0.08);
 }
 
 .category-avatar {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   background: #eff6ff;
-  color: #2563eb; /* Ko'k */
+  color: #2563eb;
   font-weight: 700;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 12px auto;
+  margin-bottom: 12px;
   text-transform: uppercase;
   transition: background 0.3s, color 0.3s;
+  font-size: 14px;
 }
 
 .category-light-card:hover .category-avatar {
-  background: #2563eb; /* Ko'k */
-  color: #ffffff; /* Oq */
+  background: #2563eb;
+  color: #ffffff;
 }
 
 .category-title {
-  font-size: 18px;
+  font-size: clamp(14px, 3vw, 16px);
   font-weight: 700;
   color: #1e293b;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   display: block;
+  word-break: break-word;
 }
 
 .category-light-card:hover .category-title {
-  color: #2563eb; /* Ko'k */
+  color: #2563eb;
 }
 
 .category-desc {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
   margin: 4px 0 0 0;
 }
@@ -200,25 +227,37 @@
    ========================================== */
 .types-light-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 16px;
+}
+
+@media (max-width: 350px) {
+  .types-light-grid {
+    grid-template-columns: 1fr; /* 300px atrofida bitta ustun bo'ladi */
+  }
 }
 
 .type-light-card {
   cursor: pointer;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  padding: 20px;
-  border-radius: 16px;
+  padding: 16px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   transition: all 0.2s ease;
 }
 
 .type-light-card:hover {
-  border-color: #2563eb; /* Ko'k (yashildan ko'kka o'zgardi) */
+  border-color: #2563eb;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.type-card-info {
+  flex: 1;
+  min-width: 0; /* Matn kesilib ketishi (ellipsis) ishlashi uchun shart */
 }
 
 .type-card-info p {
@@ -228,11 +267,14 @@
 .type-name {
   font-weight: 600;
   color: #1e293b;
-  font-size: 16px;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Uzoq nomlar sig'masa chiroyli kesiladi */
 }
 
 .type-light-card:hover .type-name {
-  color: #2563eb; /* Ko'k */
+  color: #2563eb;
 }
 
 .type-subtext {
@@ -244,12 +286,13 @@
 .type-arrow {
   color: #cbd5e1;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 18px;
   transition: color 0.2s, transform 0.2s;
+  flex-shrink: 0;
 }
 
 .type-light-card:hover .type-arrow {
-  color: #2563eb; /* Ko'k */
+  color: #2563eb;
   transform: translateX(4px);
 }
 
@@ -266,18 +309,19 @@
 }
 
 .katalog-back-btn {
-  display: flex; 
+  display: inline-flex; 
   align-items: center; 
   gap: 6px; 
   background: #ffffff; 
   border: 1px solid #cbd5e1; 
-  padding: 8px 16px; 
+  padding: 8px 14px; 
   border-radius: 8px; 
   cursor: pointer; 
   font-weight: 600; 
   color: #475569; 
   font-size: 12px;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .katalog-back-btn:hover { 
@@ -287,14 +331,21 @@
 
 .products-light-grid {
   display: grid; 
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
+  gap: 16px;
+}
+
+@media (max-width: 480px) {
+  .products-light-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Kichik telefonlarda 2 tadan joylashadi */
+    gap: 12px;
+  }
 }
 
 .product-light-card {
   background: #ffffff; 
   border: 1.5px solid #cbd5e1; 
-  border-radius: 20px; 
+  border-radius: 16px; 
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
   transition: all 0.3s ease;
@@ -308,56 +359,60 @@
 .product-light-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 15px rgba(0, 0, 0, 0.05);
-  border-color: #2563eb; /* Ko'k */
+  border-color: #2563eb;
 }
 
 .product-img-box {
   width: 100%; 
-  height: 160px; 
+  height: 140px; 
   background: #f1f5f9; 
   border-bottom: 1px solid #cbd5e1;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 8px;
+  box-sizing: border-box;
 }
 
 .product-tag {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  background: #2563eb; /* Ko'k */
-  color: #ffffff; /* Oq */
+  top: 6px;
+  left: 6px;
+  background: #2563eb;
+  color: #ffffff;
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
+  z-index: 2;
 }
 
 .product-img-placeholder {
   text-align: center;
+  padding: 8px;
 }
 
 .placeholder-url {
   font-family: monospace;
   color: #94a3b8;
-  font-size: 12px;
+  font-size: 11px;
   margin: 0;
-  max-width: 180px;
+  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .placeholder-icon {
-  font-size: 30px;
+  font-size: 24px;
   display: block;
   margin-top: 4px;
 }
 
 .product-details {
-  padding: 20px; 
+  padding: 12px; 
   background: #ffffff; 
   text-align: left;
   flex: 1;
@@ -366,25 +421,31 @@
   justify-content: space-between;
 }
 
+@media (min-width: 480px) {
+  .product-details {
+    padding: 16px;
+  }
+}
+
 .product-title-group h3 {
-  font-size: 16px; 
+  font-size: 14px; 
   font-weight: 700; 
   margin: 0; 
-  color: #0f172a; /* Qora */
+  color: #0f172a;
   display: -webkit-box;
-  /* -webkit-line-clamp: 2; */
+  -webkit-line-clamp: 2; /* Max 2 qator matn ko'rinadi */
   -webkit-box-orient: vertical;
   overflow: hidden;
-  height: 44px; 
+  height: 40px; 
   line-height: 1.4;
 }
 
 .product-light-card:hover .product-title-group h3 {
-  color: #2563eb; /* Ko'k */
+  color: #2563eb;
 }
 
 .product-id-badge {
-  font-size: 11px;
+  font-size: 10px;
   color: #64748b;
   margin: 6px 0 0 0;
   font-weight: 500;
@@ -395,41 +456,46 @@
 }
 
 .product-footer-action {
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px; /* Kichik telefonlarda tugmalar narx ostiga tushadi */
 }
 
 .product-price {
-  color: #0f172a; /* Qora (yashildan o'zgardi) */
+  color: #0f172a;
   font-weight: 800; 
-  font-size: 16px; 
+  font-size: 14px; 
   margin: 0;
+  white-space: nowrap;
 }
 
-/* CRUD tugmalari guruhlari */
 .admin-crud-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .btn-crud {
   border: none;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease;
   color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-crud.edit {
-  background-color: #0f172a; /* Qora (sariqdan o'zgardi) */
+  background-color: #0f172a;
 }
 
 .btn-crud.edit:hover {
@@ -437,7 +503,7 @@
 }
 
 .btn-crud.delete {
-  background-color: #64748b; /* To'q kulrang/qora ohang (qizildan o'zgardi) */
+  background-color: #64748b;
 }
 
 .btn-crud.delete:hover {
@@ -445,18 +511,19 @@
 }
 
 .btn-main-add {
-  background-color: #2563eb; /* Ko'k */
+  background-color: #2563eb;
   color: #ffffff;
   border: none;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-size: 14px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: background 0.2s;
+  white-space: nowrap;
 }
 
 .btn-main-add:hover {
@@ -464,60 +531,67 @@
 }
 
 /* ==========================================
-   🔍 MODAL OYNALAR INTEGRATSIYASI (CRUD VA DETAILS)
+   🔍 MODAL OYNALAR INTEGRATSIYASI
    ========================================== */
 .admin-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6); /* Yarim shaffof qora */
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 999;
-  padding: 16px;
+  padding: 12px; /* Ekran chetiga yopishib qolmasligi uchun */
+  box-sizing: border-box;
+  overflow-y: auto; /* Agar modal baland bo'lsa, scroll chiqishi uchun */
 }
 
 .admin-modal-card {
   background: #ffffff;
-  border-radius: 20px;
-  max-width: 480px;
+  border-radius: 16px;
+  max-width: 460px;
   width: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin: auto; /* overlay ichida markazlashish uchun */
   animation: modalSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  max-height: calc(100vh - 24px); /* Modallarni ekran balandligidan oshib ketmasligi kafolatlanadi */
 }
 
 .admin-modal-card.large {
-  max-width: 512px;
+  max-width: 500px;
 }
 
 @keyframes modalSlide {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Modal sarlavhalari */
 .modal-header-dark {
-  background: #0f172a; /* Qora */
+  background: #0f172a;
   color: #ffffff;
-  padding: 20px 24px;
+  padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .modal-header-dark h3 {
   margin: 4px 0 0 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
+  word-break: break-word;
 }
 
 .modal-tag {
-  font-size: 10px;
+  font-size: 9px;
   text-transform: uppercase;
-  background: #2563eb; /* Ko'k */
-  padding: 2px 8px;
+  background: #2563eb;
+  padding: 2px 6px;
   border-radius: 4px;
   font-weight: 800;
 }
@@ -526,39 +600,37 @@
   background: none;
   border: none;
   color: #ffffff;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
-  line-height: 1;
-}
-
-.modal-close-x:hover {
-  color: #cbd5e1;
+  flex-shrink: 0;
 }
 
 .modal-header-light {
-  padding: 20px 24px 12px 24px;
+  padding: 16px 20px 10px 20px;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .modal-header-light h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-  color: #0f172a; /* Qora */
+  color: #0f172a;
 }
 
-/* Modal kontenti */
+/* Modal ichki kontenti - Scroll himoyasi bilan */
 .modal-body-content {
-  padding: 24px;
+  padding: 16px 20px;
+  overflow-y: auto; /* Kontent juda uzun bo'lsa faqat modal ichi scroll bo'ladi */
+  flex: 1;
 }
 
 .detail-row-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 12px;
   border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 12px;
-  margin-bottom: 16px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .detail-item-box p {
@@ -566,7 +638,7 @@
 }
 
 .detail-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
@@ -576,44 +648,40 @@
   font-weight: 700;
   color: #1e293b;
   margin-top: 2px !important;
-  font-size: 14px;
-}
-
-.detail-value.mono {
-  font-family: monospace;
+  font-size: 13px;
+  word-break: break-all; /* ID yoki uzun matnlar buzilmasligi uchun */
 }
 
 .detail-value.price-color {
-  color: #0f172a; /* Qora (yashildan o'zgardi) */
-  font-size: 16px;
+  color: #0f172a;
+  font-size: 14px;
 }
 
 .detail-value.category-color {
-  color: #2563eb; /* Ko'k */
-  text-transform: uppercase;
+  color: #2563eb;
 }
 
-/* Xususiyatlar jadvali modal ichida */
 .modal-specs-box {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .specs-scroll-container {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
-  max-height: 160px;
+  border-radius: 10px;
+  padding: 10px;
+  max-height: 140px;
   overflow-y: auto;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .spec-item-line {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
   padding: 6px 0;
   border-bottom: 1px solid #e2e8f0;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .spec-item-line:last-child {
@@ -623,73 +691,76 @@
 .spec-line-key {
   font-weight: 700;
   color: #64748b;
+  white-space: nowrap;
 }
 
 .spec-line-val {
   font-weight: 600;
-  color: #0f172a; /* Qora */
+  color: #0f172a;
+  text-align: right;
+  word-break: break-word;
 }
 
-/* Form elementlari */
+/* Forma Elementlari va Inputlar */
 .admin-form-group {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .admin-form-group label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
-.admin-form-group input {
+.admin-form-group input,
+.admin-form-group select {
   width: 100%;
-  padding: 10px 14px;
+  padding: 10px 12px;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px;
   box-sizing: border-box;
-  font-size: 14px;
-  color: #0f172a; /* Qora */
+  font-size: 13px;
+  color: #0f172a;
   outline: none;
   background-color: #ffffff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s;
 }
 
-.admin-form-group input:focus {
-  border-color: #2563eb; /* Ko'k */
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-.admin-form-group input.uppercase-input {
-  text-transform: uppercase;
+.admin-form-group input:focus,
+.admin-form-group select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .form-row-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
 }
 
-/* Modal Harakat Tugmalari */
+/* Modal Pastki Qismi */
 .modal-footer-actions {
-  padding: 16px 24px;
+  padding: 12px 20px;
   background: #f8fafc;
   border-top: 1px solid #f1f5f9;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  flex-shrink: 0; /* Ekran juda kichrayganda formani ezib qo'ymaydi */
 }
 
 .btn-modal-action {
   border: none;
-  padding: 8px 16px;
-  border-radius: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  white-space: nowrap;
 }
 
 .btn-modal-action.cancel {
@@ -702,7 +773,7 @@
 }
 
 .btn-modal-action.submit {
-  background: #2563eb; /* Ko'k */
+  background: #2563eb;
   color: #ffffff;
 }
 
@@ -711,7 +782,7 @@
 }
 
 .btn-modal-action.warn {
-  background: #0f172a; /* Qora (sariqdan o'zgardi) */
+  background: #0f172a;
   color: #ffffff;
 }
 
@@ -725,14 +796,14 @@
 .katalog-spinner-box { 
   display: flex; 
   justify-content: center; 
-  padding: 80px 0; 
+  padding: 60px 0; 
 }
 
 .spinner { 
-  width: 40px; 
-  height: 40px; 
+  width: 36px; 
+  height: 36px; 
   border: 4px solid #e2e8f0; 
-  border-top: 4px solid #2563eb; /* Ko'k */
+  border-top: 4px solid #2563eb; 
   border-radius: 50%; 
   animation: spin 0.8s linear infinite; 
 }
@@ -744,57 +815,85 @@
 
 .no-data-box { 
   text-align: center;
-  padding: 48px 20px;
+  padding: 40px 16px;
   background: #ffffff;
   border: 1px dashed #cbd5e1;
-  border-radius: 16px;
+  border-radius: 12px;
   color: #94a3b8;
   width: 100%;
   box-sizing: border-box;
 }
 
-.no-data-box p { 
-  margin: 0; 
-  font-size: 15px; 
-  font-weight: 500; 
-}
-
 /* ==========================================
-   📱 RESPONSIVE MOSLASHUVCHANLIK
+   📱 1300px dan 300px gacha DINAMIK MOSLASHUV
    ========================================== */
-@media (max-width: 640px) {
+
+/* 1. Planshetlar va kichik noutbuklar uchun (< 1024px) */
+@media (max-width: 1024px) {
   .katalog-light-banner {
     padding: 20px;
-    text-align: center;
+  }
+}
+
+/* 2. O'rta hajmdagi planshetlar va katta telefonlar uchun (< 768px) */
+@media (max-width: 768px) {
+  .katalog-light-banner {
+    margin-bottom: 20px;
+  }
+  .detail-row-grid {
+    grid-template-columns: 1fr; /* Modal detallari ustunma-ustun joylashadi */
+    gap: 8px;
+  }
+}
+
+/* 3. Mobil qurilmalar uchun (< 600px) */
+@media (max-width: 600px) {
+  .katalog-light-banner {
     flex-direction: column;
-    justify-content: center;
-  }
-
-  .banner-left-info {
-    text-align: center;
-  }
-
-  .banner-icon-title {
-    justify-content: center;
+    align-items: flex-start;
+    gap: 14px;
   }
 
   .btn-main-add {
-    width: 100%;
+    width: 100%; /* Qo'shish tugmasi to'liq eniga cho'ziladi */
     justify-content: center;
   }
 
-  .categories-light-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 16px;
-  }
-
   .form-row-split {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* Narx va Kategoriya inputlari alohida qatorga tushadi */
     gap: 0;
   }
+}
 
-  .detail-row-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
+/* 4. O'ta ingichka va kichik ekranlar uchun (300px - 380px) */
+@media (max-width: 380px) {
+  .katalog-light-wrapper {
+    padding: 10px; /* Yon bo'shliqlar minimal qilinadi */
+  }
+
+  .katalog-light-banner {
+    padding: 16px;
+  }
+
+  .katalog-breadcrumbs {
+    padding: 8px 12px;
+    gap: 4px 6px;
+  }
+
+  .modal-header-dark,
+  .modal-body-content,
+  .modal-footer-actions {
+    padding: 12px 14px; /* Modal ichki qismlari kichrayadi */
+  }
+  
+  .product-footer-action {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .admin-crud-group {
+    width: 100%;
+    justify-content: space-between;
   }
 }
