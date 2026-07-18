@@ -1,0 +1,424 @@
+/* ==========================================
+   PROFIL SOZLAMALARI (SETTINGS) ASOSIY STILLARI
+   ========================================== */
+
+   .settings-tab-wrapper {
+    width: 100%;
+    max-width: 550px;
+    margin: 0 auto;
+    padding: 16px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    box-sizing: border-box;
+  }
+  
+  /* 1. Header qismi */
+  .settings-tab-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    gap: 12px;
+  }
+  
+  .settings-back-arrow {
+    background: none;
+    border: none;
+    color: #334155;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+  }
+  
+  .settings-back-arrow:hover {
+    background-color: #f1f5f9;
+  }
+  
+  .settings-tab-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    text-align: center;
+    flex-grow: 1;
+  }
+  
+  /* 2. Asosiy Profil Kartasi (Main Card) */
+  .settings-main-card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+  }
+  
+  /* Avatar va foydalanuvchi ma'lumotlari qismi */
+  .settings-user-profile-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  
+  .settings-large-avatar {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    background-color: #f0f4f9; 
+    color: #adc2d6; 
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .settings-user-profile-summary h3 {
+    margin: 12px 0 4px 0;
+    font-size: 18px;
+    color: #1e293b;
+    font-weight: 600;
+  }
+  
+  .settings-user-phone {
+    margin: 0;
+    font-size: 14px;
+    color: #64748b;
+  }
+  
+  /* Input Bloklari */
+  .settings-input-block {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+    position: relative; 
+    width: 100%;
+  }
+  
+  .settings-input-block label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .form-icon-accent {
+    color: #2563eb;
+  }
+  
+  /* Standart Matnli Input */
+  .settings-input-block input {
+    width: 100%;
+    height: 52px;
+    padding: 0 16px;
+    font-size: 15px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background-color: #f1f3f4;
+    color: #202124;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+  
+  .settings-input-block input:focus {
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  
+  /* Dropdown elementlari */
+  .custom-select-trigger {
+    width: 100%;
+    height: 52px;
+    padding: 0 16px;
+    font-size: 15px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background-color: #f1f3f4;
+    color: #202124;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+  }
+  
+  .custom-select-trigger.open {
+    border-color: #2563eb;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  
+  .disabled-block {
+    opacity: 0.6;
+  }
+  
+  .custom-select-trigger.disabled {
+    cursor: not-allowed;
+  }
+  
+  .custom-select-options {
+    position: absolute;
+    top: 82px; 
+    left: 0;
+    width: 100%;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    z-index: 999; 
+    max-height: 240px; 
+    overflow-y: auto;
+    padding: 6px 0;
+    box-sizing: border-box;
+  }
+  
+  .custom-option {
+    padding: 12px 16px;
+    font-size: 15px;
+    color: #334155;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  
+  .custom-option:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+  }
+  
+  .custom-option.selected {
+    background-color: #e8f0fe;
+    color: #2563eb;
+    font-weight: 600;
+  }
+  
+  /* Tugmalar */
+  .settings-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 28px;
+  }
+  
+  .settings-submit-btn {
+    width: 100%;
+    height: 50px;
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+  }
+  
+  .settings-submit-btn:hover {
+    background-color: #1d4ed8;
+  }
+  
+  .settings-submit-btn:disabled {
+    background-color: #93c5fd;
+    cursor: not-allowed;
+  }
+  
+  .settings-exit-btn {
+    width: 100%;
+    height: 50px;
+    background: none;
+    border: 1px solid #e2e8f0;
+    color: #ef4444;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  
+  .settings-exit-btn:hover {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
+  }
+  
+  
+  /* ==========================================
+     3. PROFESSIONAL VERTICAL (PASTMA-PAST) MIJOZLAR KARTASI
+     ========================================== */
+  
+  .settings-support-container-card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    box-sizing: border-box;
+  }
+  
+  .settings-support-heading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  
+  .settings-support-heading h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #0f172a;
+    font-weight: 700;
+  }
+  
+  /* 🚀 Ro'yxat ketma-ketligi konteyneri */
+  .settings-support-vertical-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Qatorlar orasidagi masofa */
+    width: 100%;
+  }
+  
+  /* Har bitta kontakt qatori */
+  .support-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f8fafc; /* Yumshoq foni */
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Sichqoncha ustiga kelganda effekt */
+  .support-list-row:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateX(4px); /* O'ng tomonga yengil surilish effekti */
+  }
+  
+  /* Chap taraf (Ikonka va Yozuvlar birga) */
+  .support-row-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    overflow: hidden;
+  }
+  
+  /* Ikonka atrofidagi yumaloq oq orqa fon */
+  .support-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    flex-shrink: 0;
+  }
+  
+  /* Ikonka o'lchamlari */
+  .support-list-icon {
+    font-size: 18px;
+  }
+  
+  /* Ikonkalarning alohida chiroyli ranglari */
+  .phone-color { color: #10b981; }     /* Yashil */
+  .telegram-color { color: #0ea5e9; }  /* Telegram ko'k */
+  .email-color { color: #f59e0b; }     /* To'q sariq */
+  .link-color { color: #6366f1; }      /* Siyohrang */
+  
+  /* Matnli qism */
+  .support-row-details {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  /* Tepadagi kichik yozuv (Masalan: Telegram) */
+  .support-row-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+  
+  /* Pastdagi katta qiymat (Masalan: @titova_sam) */
+  .support-row-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* O'ng tarafdagi yo'naltiruvchi kichkina strelka */
+  .support-row-arrow {
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, transform 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 10px;
+  }
+  
+  .support-list-row:hover .support-row-arrow {
+    color: #2563eb;
+    transform: scale(1.1);
+  }
+  
+  .loading-contacts-text {
+    text-align: center;
+    font-size: 14px;
+    color: #64748b;
+    padding: 10px 0;
+  }
+  
+  /* ==========================================
+     4. RESPONSIVE (MOBIL QURILMALAR UCHUN)
+     ========================================== */
+  @media (max-width: 480px) {
+    .settings-tab-wrapper {
+      padding: 10px;
+    }
+  
+    .settings-main-card,
+    .settings-support-container-card {
+      padding: 16px;
+    }
+  
+    .support-list-row {
+      padding: 12px;
+    }
+  
+    .support-row-value {
+      font-size: 13px;
+    }
+  }

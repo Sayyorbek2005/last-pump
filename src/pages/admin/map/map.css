@@ -1,0 +1,176 @@
+/* Asosiy konteyner */
+.admin-map-container {
+  width: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8fafc;
+}
+
+/* Karta dizayni (Ko'k rangli aksentlar bilan) */
+.admin-map-card {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+}
+
+/* Sarlavha */
+.admin-map-title {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-icon {
+  color: #2563eb; /* Chiroyli ko'k rang */
+}
+
+/* Bildirishnomalar */
+.admin-map-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+
+.admin-map-alert.success {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.admin-map-alert.error {
+  background-color: #fff5f5;
+  color: #e11d48;
+  border: 1px solid #ffe4e6;
+}
+
+/* Forma tuzilishi */
+.admin-map-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+}
+
+/* Input elementlari */
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  outline: none;
+  font-size: 14px;
+  color: #1e293b;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+/* 🗺 Jonli xarita ko'rinishi bo'limi */
+.map-preview-box {
+  border: 1px solid #d9e6ff;
+  background-color: #f0f5ff;
+  border-radius: 14px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.preview-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d4ed8;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-iframe {
+  border-radius: 10px;
+  border: 1px solid #bfdbfe;
+  background: #e5e7eb;
+}
+
+/* Saqlash tugmasi (Ko'k gradientli) */
+.form-submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.form-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+.form-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive moslashuvchanlik */
+@media (max-width: 480px) {
+  .admin-map-container {
+    padding: 12px;
+  }
+  
+  .admin-map-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .admin-map-title {
+    font-size: 18px;
+    margin-bottom: 18px;
+  }
+
+  .form-input {
+    padding: 10px 14px;
+  }
+}
