@@ -1,52 +1,199 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../../supabase/client'; 
 import './katalog.css'; 
 
-import imgQB from "./assets2/QB.png";
-import imgCPm from "./assets2/CPm.png";
-import imgPW from "./assets2/PW.png";
-import imgPWE from "./assets2/PW-E.png";
-// import imgPWF from "./assets2/PW.png";
-import imgQDX from "./assets2/QDX.png";
-import imgTCM from "./assets2/TCM.png";
-// import imgTCH from "./assets2/TCM.png";
-import imgJET from "./assets2/JET.png";
-import imgTHF from "./assets2/THF.png";
+// === 1. BARCHA RASMLARNI IMPORT QILISH (assets2 PAPKASIDAN) ===
+import img2STM1 from "./assets2/2STM-1.png";
+import img2STM2 from "./assets2/2STM-2.png";
 import img2TCP from "./assets2/2TCP25-160A.png";
-import img50WFD from "./assets2/WFD.png"; 
-import imgQFD from "./assets2/QFD.png";
+import img4GS1 from "./assets2/4GS-1.png";
+import img4GS from "./assets2/4GS.png";
+import img4SMF from "./assets2/4SM-F.png";
+import img4TMS from "./assets2/4TMS.png";
+import img5KSE1 from "./assets2/5KSE-1.png";
+import img6SP1 from "./assets2/6SP-1.png";
+import img6SP46D4 from "./assets2/6SP46-D4.png";
 import imgATJSW from "./assets2/ATJSW.png";
-import imgSTAR_F from "./assets2/STSR40-10F.png"; 
-import imgSGJ from "./assets2/2STM-2.png";
-// import imgGS from "./assets2/2STM-2.png";
-import imgCHLFT from "./assets2/CHLF(T)гиpng.png";
+import imgCHLFT from "./assets2/CHLF(T)гиpng.png"; // Fayl nomini tekshiring
+import imgCHL from "./assets2/CHLгиpng.png";
 import imgCHM from "./assets2/CHMгиpng.png";
-import imgTW from "./assets2/TW-T.png";
-import imgGRD from "./assets2/GP.png";
-import imgSTAR_C from "./assets2/STAR-6A.png"; 
-// import imgPM01 from "./assets2/PW.png";
+import imgCPm from "./assets2/CPm.png";
+import imgGP from "./assets2/GP.png";
+import imgGRSF from "./assets2/GRS-F.png";
+import imgGRSH from "./assets2/GRS=н.png";
+import imgGRS25_4_6 from "./assets2/GRS25-4-6.png";
+import imgImageFoue from "./assets2/imagefoue.png";
+import imgImageOne from "./assets2/imageone.png";
+import imgImageThree from "./assets2/imagethree.png";
+import imgImageTwo from "./assets2/imagetwo.png";
+import imgJET from "./assets2/JET.png";
+import imgJET400S from "./assets2/JET400S.png";
+import imgPWE from "./assets2/PW-E.png";
+import imgPW from "./assets2/PW.png";
+import imgQB from "./assets2/QB.png";
+import imgQDT2 from "./assets2/QD-¦T (2).png";
+import imgQDX from "./assets2/QDX.png";
+import imgQFD from "./assets2/QFD.png";
+import imgQYT1 from "./assets2/QY-¦T (1).png";
+import imgSTAR6A from "./assets2/STAR-6A.png";
+import imgSTSR40_10F from "./assets2/STSR40-10F.png";
+import imgTCM from "./assets2/TCM.png";
+import imgTHF from "./assets2/THF.png";
+import imgTNF from "./assets2/TNF.png";
+import imgTWT from "./assets2/TW-T.png";
+import imgWFD from "./assets2/WFD.png";
+import imgWQD from "./assets2/WQD.png";
+import imgWSD from "./assets2/WSD.png";
 
-// Static rasmlarni bazadagi nomlar bilan bog'laydigan ob'ekt
+// === 2. BAZADAGI NOMLAR BILAN STATIK RASMLARNI BOG'LOVCHI OBYEKT ===
 const imageMapping = {
-  "QB.png": imgQB,
-  "CPm.png": imgCPm,
-  "PW.png": imgPW,
-  "PW-E.png": imgPWE,
-  "QDX.png": imgQDX,
-  "TCM.png": imgTCM,
-  "JET.png": imgJET,
-  "THF.png": imgTHF,
+  "2STM-1.png": img2STM1,
+  "2STM-2.png": img2STM2,
   "2TCP25-160A.png": img2TCP,
-  "WFD.png": img50WFD,
-  "QFD.png": imgQFD,
+  "4GS-1.png": img4GS1,
+  "4GS.png": img4GS,
+  "4SM-F.png": img4SMF,
+  "4TMS.png": img4TMS,
+  "5KSE-1.png": img5KSE1,
+  "6SP-1.png": img6SP1,
+  "6SP46-D4.png": img6SP46D4,
   "ATJSW.png": imgATJSW,
-  "STSR40-10F.png": imgSTAR_F,
-  "2STM-2.png": imgSGJ, 
   "CHLF(T)гиpng.png": imgCHLFT,
+  "CHLгиpng.png": imgCHL,
   "CHMгиpng.png": imgCHM,
-  "TW-T.png": imgTW,
-  "GP.png": imgGRD,
-  "STAR-6A.png": imgSTAR_C
+  "CPm.png": imgCPm,
+  "GP.png": imgGP,
+  "GRS-F.png": imgGRSF,
+  "GRS=н.png": imgGRSH,
+  "GRS25-4-6.png": imgGRS25_4_6,
+  "imagefoue.png": imgImageFoue,
+  "imageone.png": imgImageOne,
+  "imagethree.png": imgImageThree,
+  "imagetwo.png": imgImageTwo,
+  "JET.png": imgJET,
+  "JET400S.png": imgJET400S,
+  "PW-E.png": imgPWE,
+  "PW.png": imgPW,
+  "QB.png": imgQB,
+  "QD-¦T (2).png": imgQDT2,
+  "QDX.png": imgQDX,
+  "QFD.png": imgQFD,
+  "QY-¦T (1).png": imgQYT1,
+  "STAR-6A.png": imgSTAR6A,
+  "STSR40-10F.png": imgSTSR40_10F,
+  "TCM.png": imgTCM,
+  "THF.png": imgTHF,
+  "TNF.png": imgTNF,
+  "TW-T.png": imgTWT,
+  "WFD.png": imgWFD,
+  "WQD.png": imgWQD,
+  "WSD.png": imgWSD
+};
+
+// === 3. FALLBACK RASM FUNKSIYASI ===
+const autoFallbackImage = (title) => {
+  if (!title) return imgImageOne;
+  const name = title.toUpperCase();
+
+  if (name.includes("QFD")) return imgQFD;
+  if (name.includes("QDX")) return imgQDX;
+  if (name.includes("TCM")) return imgTCM;
+  if (name.includes("JET")) {
+    if (name.includes("400")) return imgJET400S;
+    return imgJET;
+  }
+  if (name.includes("THF")) return imgTHF;
+  if (name.includes("TNF")) return imgTNF;
+  if (name.includes("PW")) return name.includes("-E") ? imgPWE : imgPW;
+  if (name.includes("GRS")) {
+    if (name.includes("25-4-6")) return imgGRS25_4_6;
+    if (name.includes("-F")) return imgGRSF;
+    return imgGRSH; // Tuzatildi: Default holatda GRS=н qaytariladi
+  }
+  if (name.includes("4GS")) return img4GS;
+  if (name.includes("6SP")) return name.includes("46-D4") ? img6SP46D4 : img6SP1;
+  if (name.includes("WQD")) return imgWQD;
+  if (name.includes("WSD")) return imgWSD;
+  if (name.includes("CPM")) return imgCPm;
+  if (name.includes("TW-T")) return imgTWT;
+  if (name.includes("2STM")) return img2STM1;
+  if (name.includes("5KSE")) return img5KSE1;
+
+  return imgImageOne;
+};
+
+// === 4. TARJIMALAR ===
+const t = {
+  uz: {
+    panelTitle: "Admin boshqaruv paneli",
+    subtitle: "Katalog turlari va modellarini boshqarish tizimi",
+    addBtn: "Yangi mahsulot qo'shish",
+    mainCat: "Barcha Turlar",
+    selectType: "Nasos turini tanlang:",
+    models: "modellari:",
+    back: "Turlarga qaytish",
+    countBadge: "ta turkum",
+    pumpCount: "ta nasos",
+    noTypes: "Tizimda hech qanday nasos turi topilmadi.",
+    noProducts: "Ushbu turkumda mahsulotlar mavjud emas.", // Tuzatildi
+    details: "Batafsil ma'lumot",
+    prodId: "Mahsulot ID:",
+    catCode: "Kategoriya kodi:",
+    price: "Ulgurji Narxi:",
+    imgName: "Rasm fayli nomi:",
+    specs: "Texnik Xususiyatlari:",
+    noSpecs: "Xususiyatlar kiritilmagan",
+    edit: "Tahrirlash",
+    close: "Yopish",
+    cancel: "Bekor qilish",
+    save: "Saqlash",
+    formNameUz: "Mahsulot nomi (O'zbekcha)",
+    formNameRu: "Mahsulot nomi (Ruscha)",
+    formPrice: "Narxi (so'm)",
+    formCat: "Kategoriya (type_id)",
+    formImg: "Rasm faylini tanlang",
+    formTypeUz: "Turi (O'zbekcha)",
+    formTypeRu: "Тип (Ruscha)",
+    formVkhVykh: "Вх/Вых (Kirish/Chiqish)",
+    formKw: "кВт (Quvvat)",
+    formLm: "л/м (Suv sarfi)",
+    formPodyem: "Подъём (Balandlik)"
+  },
+  ru: {
+    panelTitle: "Панель управления админа",
+    subtitle: "Система управления типами и модели каталога",
+    addBtn: "Добавить новый товар",
+    mainCat: "Все типы",
+    selectType: "Выберите тип насоса:",
+    models: "модели:",
+    back: "К типам",
+    countBadge: "категорий",
+    pumpCount: "насосов",
+    noTypes: "Типы насосов не найдены.",
+    noProducts: "В этой категории нет товаров.",
+    details: "Подробная информация",
+    prodId: "ID товара:",
+    catCode: "Код категории:",
+    price: "Оптовая цена:",
+    imgName: "Имя файла изображения:",
+    specs: "Технические характеристики:",
+    noSpecs: "Характеристики не введены",
+    edit: "Редактировать",
+    close: "Закрыть",
+    cancel: "Отмена",
+    save: "Сохранить",
+    formNameUz: "Название товара (Узбекский)",
+    formNameRu: "Название товара (Русский)",
+    formPrice: "Цена (сум)",
+    formCat: "Категория (type_id)",
+    formImg: "Выберите файл изображения",
+    formTypeUz: "Тип (На узбекском)",
+    formTypeRu: "Тип (На русском)",
+    formVkhVykh: "Вх/Вых",
+    formKw: "кВт",
+    formLm: "л/м",
+    formPodyem: "Подъём"
+  }
 };
 
 export default function AdminCatalog({ lang }) {
@@ -54,101 +201,21 @@ export default function AdminCatalog({ lang }) {
   const [loading, setLoading] = useState(true);
   const [currentLang, setCurrentLang] = useState(lang || 'uz'); 
 
-  // Navigatsiya va Filtrlash holatlari
-  const [selectedCategory, setSelectedCategory] = useState(null); 
   const [selectedType, setSelectedType] = useState(null); 
   const [viewingProductDetails, setViewingProductDetails] = useState(null); 
 
-  // Modal va Forma holatlari (CRUD)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  
   const [formData, setFormData] = useState({
-    title_uz: '',
-    title_ru: '', 
-    price: '',
-    image_url: '',
-    type_id: '', 
-    turi_uz: '',  
-    turi_ru: ''   
+    title_uz: '', title_ru: '', price: '', image_url: '', type_id: '', 
+    turi_uz: '', turi_ru: '', vkh_vykh: '', kw: '', lm: '', podyem: ''
   });
 
-  // Tillar uchun tarjimalar lug'ati
-  const t = {
-    uz: {
-      panelTitle: "Admin boshqaruv paneli",
-      subtitle: "Kataloglarni ichma-ich filtrlash va boshqarish tizimi",
-      addBtn: "Yangi mahsulot qo'shish",
-      mainCat: "Asosiy Katalog",
-      selectCat: "Kategoriyani tanlang:",
-      selectType: "Nasos turini tanlang:",
-      models: "modellari:",
-      back: "Orqaga qaytish",
-      backTypes: "Turlarga qaytish",
-      countBadge: "ta turkum",
-      pumpCount: "ta nasos",
-      noTypes: "Bu kategoriyaga tegishli turlar topilmadi.",
-      noProducts: "Ushbu turkumda mahsulotlar marvel emas.",
-      details: "Batafsil ma'lumot",
-      prodId: "Mahsulot ID:",
-      catCode: "Kategoriya kodi:",
-      price: "Ulgurji Narxi:",
-      imgName: "Rasm fayli nomi:",
-      specs: "Texnik Xususiyatlari:",
-      noSpecs: "Xususiyatlar kiritilmagan",
-      edit: "Tahrirlash",
-      close: "Yopish",
-      cancel: "Bekor qilish",
-      save: "Saqlash",
-      formNameUz: "Mahsulot nomi (O'zbekcha)",
-      formNameRu: "Mahsulot nomi (Ruscha)",
-      formPrice: "Narxi (so'm)",
-      formCat: "Kategoriya (type_id)",
-      formImg: "Rasm faylini tanlang",
-      formTypeUz: "Turi (O'zbekcha xususiyat)",
-      formTypeRu: "Turi (Ruscha xususiyat)"
-    },
-    ru: {
-      panelTitle: "Панель управления админа",
-      subtitle: "Система вложенной фильтрации и управления каталогом",
-      addBtn: "Добавить новый товар",
-      mainCat: "Главный Каталог",
-      selectCat: "Выберите категорию:",
-      selectType: "Выберите тип насоса:",
-      models: "модели:",
-      back: "Назад",
-      backTypes: "К типам",
-      countBadge: "категорий",
-      pumpCount: "насосов",
-      noTypes: "Типы для этой категории не найдены.",
-      noProducts: "В этой категории нет товаров.",
-      details: "Подробная информация",
-      prodId: "ID товара:",
-      catCode: "Код категории:",
-      price: "Оптовая цена:",
-      imgName: "Имя файла изображения:",
-      specs: "Технические характеристики:",
-      noSpecs: "Характеристики не введены",
-      edit: "Редактировать",
-      close: "Закрыть",
-      cancel: "Отмена",
-      save: "Сохранить",
-      formNameUz: "Название товара (Узбекский)",
-      formNameRu: "Название товара (Русский)",
-      formPrice: "Цена (сум)",
-      formCat: "Категория (type_id)",
-      formImg: "Выберите файл изображения",
-      formTypeUz: "Тип (Характеристика на узб.)",
-      formTypeRu: "Тип (Характеристика на рус.)"
-    }
-  };
-
   useEffect(() => {
-    if (lang) {
-      setCurrentLang(lang);
-    }
+    if (lang) setCurrentLang(lang);
   }, [lang]);
 
-  // Supabase'dan ma'lumotlarni yuklash
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -170,13 +237,33 @@ export default function AdminCatalog({ lang }) {
     fetchProducts();
   }, []);
 
-  // Mahsulotni o'chirish
+  // Performance Optimallashtirish: Barcha turlarni faqat products o'zgarganda hisoblash
+  const allTypes = useMemo(() => {
+    const types = products.map(p => {
+      const arr = p?.characteristics || p?.specs || [];
+      const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
+      return foundObj?.value ? foundObj.value.trim() : null;
+    }).filter(Boolean);
+    return [...new Set(types)];
+  }, [products]);
+
+  // Har bir turga tegishli nasoslar sonini hisoblash funksiyasi
+  const getTypeCount = (turiName) => {
+    return products.filter(p => {
+      const arr = p?.characteristics || p?.specs || [];
+      const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
+      return foundObj?.value ? foundObj.value.trim() === turiName : false;
+    }).length;
+  };
+
   const handleDelete = async (e, id) => {
     e.stopPropagation(); 
-    if (window.confirm(currentLang === 'uz' ? "Ushbu mahsulotni o'chirmoqchisiz?" : "Удалить этот товар?")) {
+    const confirmMsg = currentLang === 'uz' ? "Ushbu mahsulotni o'chirmoqchisiz?" : "Удалить этот товар?";
+    if (window.confirm(confirmMsg)) {
       const { error } = await supabase.from('products').delete().eq('id', id);
-      if (error) alert("Xato: " + error.message);
-      else {
+      if (error) {
+        alert("Xato: " + error.message);
+      } else {
         alert(currentLang === 'uz' ? "Muvaffaqiyatli o'chirildi!" : "Успешно удалено!");
         fetchProducts();
         if (viewingProductDetails?.id === id) setViewingProductDetails(null);
@@ -184,49 +271,48 @@ export default function AdminCatalog({ lang }) {
     }
   };
 
-  // Tahrirlash modalini ochish
   const openEditModal = (e, product) => {
     e.stopPropagation();
     setEditingProduct(product);
     
     const targetArray = product?.characteristics || product?.specs || [];
-    const turiUzValue = targetArray.find(c => c?.key === "Turi")?.value || '';
-    const turiRuValue = targetArray.find(c => c?.key === "Тип")?.value || '';
-
+    
     setFormData({
       title_uz: product?.title_uz || '',
       title_ru: product?.title_ru || '',
       price: product?.price || '',
       image_url: product?.image_url || '',
       type_id: product?.type_id || '',
-      turi_uz: turiUzValue,
-      turi_ru: turiRuValue
+      turi_uz: targetArray.find(c => c?.key === "Turi")?.value || '',
+      turi_ru: targetArray.find(c => c?.key === "Тип")?.value || '',
+      vkh_vykh: targetArray.find(c => c?.key === "Вх/Вых")?.value || '',
+      kw: targetArray.find(c => c?.key === "кВт")?.value || '',
+      lm: targetArray.find(c => c?.key === "л/м")?.value || '',
+      podyem: targetArray.find(c => c?.key === "Подъём")?.value || ''
     });
     setIsModalOpen(true);
   };
 
-  // Yangi mahsulot yaratish modalini ochish
   const openCreateModal = () => {
     setEditingProduct(null);
     setFormData({ 
-      title_uz: '', 
-      title_ru: '', 
-      price: '', 
-      image_url: '', 
-      type_id: selectedCategory || '', 
-      turi_uz: selectedType || '', 
-      turi_ru: selectedType || '' 
+      title_uz: '', title_ru: '', price: '', image_url: '', type_id: '', 
+      turi_uz: selectedType || '', turi_ru: selectedType || '',
+      vkh_vykh: '', kw: '', lm: '', podyem: ''
     });
     setIsModalOpen(true);
   };
 
-  // Formani saqlash (Insert / Update)
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     const jsonFormat = [
-      { key: "Turi", value: formData.turi_uz },
-      { key: "Тип", value: formData.turi_ru }
+      { key: "Turi", value: formData.turi_uz.trim() },
+      { key: "Тип", value: formData.turi_ru.trim() },
+      { key: "Вх/Вых", value: formData.vkh_vykh.trim() },
+      { key: "кВт", value: formData.kw.trim() },
+      { key: "л/м", value: formData.lm.trim() },
+      { key: "Подъём", value: formData.podyem.trim() }
     ];
 
     const productData = {
@@ -239,45 +325,31 @@ export default function AdminCatalog({ lang }) {
       specs: jsonFormat
     };
 
+    let error;
     if (editingProduct) {
-      const { error } = await supabase.from('products').update(productData).eq('id', editingProduct.id);
-      if (error) alert(error.message);
-      else {
-        alert(currentLang === 'uz' ? "Yangilandi!" : "Обновлено!");
-        setIsModalOpen(false);
-        fetchProducts();
-      }
+      const res = await supabase.from('products').update(productData).eq('id', editingProduct.id);
+      error = res.error;
     } else {
-      const { error } = await supabase.from('products').insert([productData]);
-      if (error) alert(error.message);
-      else {
-        alert(currentLang === 'uz' ? "Katalogga qo'shildi!" : "Добавлено в каталог!");
-        setIsModalOpen(false);
-        fetchProducts();
-      }
+      const res = await supabase.from('products').insert([productData]);
+      error = res.error;
+    }
+
+    if (error) {
+      alert(error.message);
+    } else {
+      alert(currentLang === 'uz' ? "Muvaffaqiyatli saqlandi!" : "Успешно сохранено!");
+      setIsModalOpen(false);
+      fetchProducts();
     }
   };
 
-  const categories = [...new Set(products.map(p => p?.type_id).filter(Boolean))];
-
-  const getTypesOfCategory = () => {
-    const filtered = products.filter(p => p?.type_id === selectedCategory);
-    const allTypes = filtered.map(p => {
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
       const arr = p?.characteristics || p?.specs || [];
       const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
-      return foundObj?.value ? foundObj.value.trim() : null;
-    }).filter(Boolean);
-    
-    return [...new Set(allTypes)];
-  };
-
-  const filteredProducts = products.filter(p => {
-    const arr = p?.characteristics || p?.specs || [];
-    const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
-    const turiValue = foundObj?.value ? foundObj.value.trim() : null;
-    
-    return p?.type_id === selectedCategory && turiValue === selectedType;
-  });
+      return foundObj?.value ? foundObj.value.trim() === selectedType : false;
+    });
+  }, [products, selectedType]);
 
   const currentTranslation = t[currentLang] || t['uz'];
 
@@ -301,17 +373,9 @@ export default function AdminCatalog({ lang }) {
 
         {/* BREADCRUMBS */}
         <div className="katalog-breadcrumbs">
-          <button onClick={() => { setSelectedCategory(null); setSelectedType(null); }} className="breadcrumb-btn">
+          <button onClick={() => setSelectedType(null)} className="breadcrumb-btn">
             {currentTranslation.mainCat}
           </button>
-          {selectedCategory && (
-            <>
-              <span className="breadcrumb-separator">/</span>
-              <button onClick={() => setSelectedType(null)} className="breadcrumb-btn active">
-                {selectedCategory.toUpperCase()}
-              </button>
-            </>
-          )}
           {selectedType && (
             <>
               <span className="breadcrumb-separator">/</span>
@@ -326,105 +390,81 @@ export default function AdminCatalog({ lang }) {
           </div>
         ) : (
           <>
-            {/* 1-BOSQICH: KATEGORIYALAR */}
-            {!selectedCategory && (
+            {/* 1-BOSQICH: BARCHA TURLAR RO'YXATI */}
+            {!selectedType && (
               <div>
                 <div className="section-divider">
-                  <h2>{currentTranslation.selectCat}</h2>
-                  <span className="badge-count">{categories.length} {currentTranslation.countBadge}</span>
-                </div>
-                <div className="categories-light-grid">
-                  {categories.map(cat => (
-                    <div key={cat} onClick={() => setSelectedCategory(cat)} className="category-light-card">
-                      <div className="category-avatar">{cat.substring(0, 2).toUpperCase()}</div>
-                      <span className="category-title">{cat.toUpperCase()}</span>
-                      <p className="category-desc">
-                        {products.filter(p => p?.type_id === cat).length} {currentTranslation.pumpCount}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 2-BOSQICH: TURINI TANLASH */}
-            {selectedCategory && !selectedType && (
-              <div>
-                <div className="katalog-inner-header">
-                  <div className="section-divider" style={{ margin: 0 }}>
-                    <h2>{currentTranslation.selectType}</h2>
-                  </div>
-                  <button onClick={() => setSelectedCategory(null)} className="katalog-back-btn">
-                    ⬅ {currentTranslation.back}
-                  </button>
+                  <h2>{currentTranslation.selectType}</h2>
+                  <span className="badge-count">{allTypes.length} {currentTranslation.countBadge}</span>
                 </div>
                 <div className="types-light-grid">
-                  {getTypesOfCategory().map(turi => (
+                  {allTypes.map(turi => (
                     <div key={turi} onClick={() => setSelectedType(turi)} className="type-light-card">
                       <div className="type-card-info">
                         <p className="type-name">{turi}</p>
-                        <p className="type-subtext">Modellarni ko'rish</p>
+                        <p className="type-subtext">{getTypeCount(turi)} {currentTranslation.pumpCount}</p>
                       </div>
                       <span className="type-arrow">→</span>
                     </div>
                   ))}
-                  {getTypesOfCategory().length === 0 && (
+                  {allTypes.length === 0 && (
                     <div className="no-data-box"><p>{currentTranslation.noTypes}</p></div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* 3-BOSQICH: MAHSULOTLAR RO'YXATI */}
-            {selectedCategory && selectedType && (
+            {/* 2-BOSQICH: MODELLAR RO'YXATI */}
+            {selectedType && (
               <div>
                 <div className="katalog-inner-header">
                   <div className="section-divider" style={{ margin: 0 }}>
                     <h2>{selectedType} {currentTranslation.models}</h2>
                   </div>
                   <button onClick={() => setSelectedType(null)} className="katalog-back-btn">
-                    ⬅ {currentTranslation.backTypes}
+                    ⬅ {currentTranslation.back}
                   </button>
                 </div>
                 
                 <div className="products-light-grid">
-                  {filteredProducts.map(item => (
-                    <div key={item.id} onClick={() => setViewingProductDetails(item)} className="product-light-card">
-                      <div className="product-img-box">
-                        <span className="product-tag">{item?.type_id?.toUpperCase()}</span>
-                        
-                        {item?.image_url && imageMapping[item.image_url.trim()] ? (
+                  {filteredProducts.map(item => {
+                    const resolvedImage = (item?.image_url && imageMapping[item.image_url.trim()]) 
+                      ? imageMapping[item.image_url.trim()] 
+                      : autoFallbackImage(item?.title_uz || item?.title_ru);
+
+                    return (
+                      <div key={item.id} onClick={() => setViewingProductDetails(item)} className="product-light-card">
+                        <div className="product-img-box">
+                          <span className="product-tag">{item?.type_id?.toUpperCase()}</span>
                           <img 
-                            src={imageMapping[item.image_url.trim()]} 
+                            src={resolvedImage || imgImageOne} 
                             alt={item?.title_uz} 
                             className="product-catalog-img" 
                             style={{ width: '100%', height: '140px', objectFit: 'contain', padding: '5px' }}
+                            onError={(e) => {
+                              e.target.onerror = null; // Cheksiz siklni oldini olish
+                              e.target.src = imgImageOne;
+                            }}
                           />
-                        ) : (
-                          <div className="product-img-placeholder">
-                            <p className="placeholder-url">{item?.image_url || 'no-image.png'}</p>
-                            <span className="placeholder-icon">📦</span>
-                          </div>
-                        )}
-                      </div>
+                        </div>
 
-                      <div className="product-details">
-                        <div className="product-title-group">
-                          <h3>{currentLang === 'uz' ? item?.title_uz : item?.title_ru}</h3>
-                          <p className="product-id-badge">ID: {item?.id}</p>
-                        </div>
-                        
-                        <div className="product-footer-action">
-                          <span className="product-price">{item?.price?.toLocaleString()} so'm</span>
+                        <div className="product-details">
+                          <div className="product-title-group">
+                            <h3>{currentLang === 'uz' ? item?.title_uz : item?.title_ru}</h3>
+                            <p className="product-id-badge">ID: {item?.id}</p>
+                          </div>
                           
-                          <div className="admin-crud-group">
-                            <button onClick={(e) => openEditModal(e, item)} className="btn-crud edit">✏️</button>
-                            <button onClick={(e) => handleDelete(e, item.id)} className="btn-crud delete">🗑️</button>
+                          <div className="product-footer-action">
+                            <span className="product-price">{item?.price?.toLocaleString()} so'm</span>
+                            <div className="admin-crud-group">
+                              <button onClick={(e) => openEditModal(e, item)} className="btn-crud edit">✏️</button>
+                              <button onClick={(e) => handleDelete(e, item.id)} className="btn-crud delete">🗑️</button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {filteredProducts.length === 0 && (
@@ -435,7 +475,7 @@ export default function AdminCatalog({ lang }) {
           </>
         )}
 
-        {/* 4-BOSQICH: MODAL — BATAFSIL KO'RISH */}
+        {/* 3-BOSQICH: MODAL — BATAFSIL KO'RISH */}
         {viewingProductDetails && (
           <div className="admin-modal-overlay">
             <div className="admin-modal-card large">
@@ -449,15 +489,14 @@ export default function AdminCatalog({ lang }) {
 
               <div className="modal-body-content">
                 <div style={{ textAlign: 'center', marginBottom: '20px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
-                  {viewingProductDetails?.image_url && imageMapping[viewingProductDetails.image_url.trim()] ? (
-                    <img 
-                      src={imageMapping[viewingProductDetails.image_url.trim()]} 
-                      alt="Katta ko'rinish" 
-                      style={{ maxHeight: '180px', maxWidth: '100%', objectFit: 'contain' }}
-                    />
-                  ) : (
-                    <span style={{ fontSize: '40px' }}>📦</span>
-                  )}
+                  <img 
+                    src={(viewingProductDetails?.image_url && imageMapping[viewingProductDetails.image_url.trim()]) 
+                      ? imageMapping[viewingProductDetails.image_url.trim()] 
+                      : autoFallbackImage(viewingProductDetails?.title_uz || viewingProductDetails?.title_ru)} 
+                    alt="Katta ko'rinish" 
+                    style={{ maxHeight: '180px', maxWidth: '100%', objectFit: 'contain' }}
+                    onError={(e) => { e.target.src = imgImageOne; }}
+                  />
                 </div>
 
                 <div className="detail-row-grid">
@@ -513,16 +552,16 @@ export default function AdminCatalog({ lang }) {
           </div>
         )}
 
-        {/* 5-BOSQICH: MODAL — QO'SHISH VA TAHRIRLASH */}
+        {/* 4-BOSQICH: MODAL — QO'SHISH VA TAHRIRLASH */}
         {isModalOpen && (
           <div className="admin-modal-overlay">
-            <div className="admin-modal-card">
+            <div className="admin-modal-card" style={{ maxWidth: '500px' }}>
               <div className="modal-header-light">
                 <h2>{editingProduct ? `✏️ ${currentTranslation.edit}` : `➕ ${currentTranslation.addBtn}`}</h2>
               </div>
               
               <form onSubmit={handleSubmit}>
-                <div className="modal-body-content" style={{ paddingBottom: '8px' }}>
+                <div className="modal-body-content" style={{ paddingBottom: '8px', maxHeight: '70vh', overflowY: 'auto' }}>
                   <div className="admin-form-group">
                     <label>{currentTranslation.formNameUz}</label>
                     <input type="text" required value={formData.title_uz} onChange={(e) => setFormData({...formData, title_uz: e.target.value})} />
@@ -558,14 +597,37 @@ export default function AdminCatalog({ lang }) {
                     </select>
                   </div>
 
-                  <div className="admin-form-group">
-                    <label>{currentTranslation.formTypeUz}</label>
-                    <input type="text" placeholder="Masalan: Vortex, Centrifugal" value={formData.turi_uz} onChange={(e) => setFormData({...formData, turi_uz: e.target.value})} />
+                  <div className="form-row-split">
+                    <div className="admin-form-group">
+                      <label>{currentTranslation.formTypeUz}</label>
+                      <input type="text" placeholder="Masalan: Girdobli" value={formData.turi_uz} onChange={(e) => setFormData({...formData, turi_uz: e.target.value})} />
+                    </div>
+                    <div className="admin-form-group">
+                      <label>{currentTranslation.formTypeRu}</label>
+                      <input type="text" placeholder="Например: Вихревой" value={formData.turi_ru} onChange={(e) => setFormData({...formData, turi_ru: e.target.value})} />
+                    </div>
                   </div>
 
-                  <div className="admin-form-group">
-                    <label>{currentTranslation.formTypeRu}</label>
-                    <input type="text" placeholder="Например: Вихревой, Центробежный" value={formData.turi_ru} onChange={(e) => setFormData({...formData, turi_ru: e.target.value})} />
+                  <div className="form-row-split">
+                    <div className="admin-form-group">
+                      <label>{currentTranslation.formVkhVykh}</label>
+                      <input type="text" placeholder="25*25" value={formData.vkh_vykh} onChange={(e) => setFormData({...formData, vkh_vykh: e.target.value})} />
+                    </div>
+                    <div className="admin-form-group">
+                      <label>{currentTranslation.formKw}</label>
+                      <input type="text" placeholder="0.37" value={formData.kw} onChange={(e) => setFormData({...formData, kw: e.target.value})} />
+                    </div>
+                  </div>
+
+                  <div className="form-row-split">
+                    <div className="admin-form-group">
+                      <label>{currentTranslation.formLm}</label>
+                      <input type="text" placeholder="35" value={formData.lm} onChange={(e) => setFormData({...formData, lm: e.target.value})} />
+                    </div>
+                    <div className="admin-form-group">
+                      <label>{currentTranslation.formPodyem}</label>
+                      <input type="text" placeholder="32" value={formData.podyem} onChange={(e) => setFormData({...formData, podyem: e.target.value})} />
+                    </div>
                   </div>
                 </div>
 

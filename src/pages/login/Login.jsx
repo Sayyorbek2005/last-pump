@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../supabase/client";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import bcrypt from "bcryptjs"; // Parolni xavfsiz solishtirish uchun
 import "./login.css";
 
 export default function Login() {
@@ -97,7 +96,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // Faqat telefon raqami bo'yicha profilni qidiramiz (parolni SQL ichida solishtirmaymiz)
+      // Faqat telefon raqami bo'yicha profilni qidiramiz
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -114,9 +113,8 @@ export default function Login() {
         return;
       }
 
-      // 🔐 BCRYPT ORQALI PAROLNI SOLISHTIRISH
-      // Kiritilgan oddiy parol bilan bazadagi xeshni (shifrlangan parolni) tekshiradi
-      const isPasswordCorrect = await bcrypt.compare(password, data.password);
+      // 🔐 BAZADAGI SHIFRLANMAGAN ODDIY PAROL BILAN SOLISHTIRISH
+      const isPasswordCorrect = password === data.password;
 
       if (!isPasswordCorrect) {
         toast.error("Telefon yoki parol noto‘g‘ri!");
@@ -149,7 +147,7 @@ export default function Login() {
     }
   };
 
-  // Tekshiruv ketayotganda foydalanuvchiga login formasi ko'rinib turmaydi
+  // Tekshiruv ketayotganda foydalanuvchiga yuklanish oynasi ko'rinadi
   if (isLoading) {
     return (
       <div className="auth-page-wrapper">
