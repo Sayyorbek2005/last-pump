@@ -244,9 +244,20 @@ export default function AdminCatalog({ lang }) {
     fetchProducts();
   }, [fetchProducts]);
 
+  // === TURLARNI TARTIBLASH: "Вихревой" (Vixrevoy) birinchi bo'lib chiqadi ===
   const allTypes = useMemo(() => {
     const types = products.map(getTypeValue).filter(Boolean);
-    return [...new Set(types)];
+    const uniqueTypes = [...new Set(types)];
+
+    return uniqueTypes.sort((a, b) => {
+      const isTargetA = a.toLowerCase().includes("vixrevoy") || a.toLowerCase().includes("вихревой");
+      const isTargetB = b.toLowerCase().includes("vixrevoy") || b.toLowerCase().includes("вихревой");
+
+      if (isTargetA) return -1;
+      if (isTargetB) return 1;
+      
+      return a.localeCompare(b);
+    });
   }, [products]);
 
   const getTypeCount = useCallback((turiName) => {

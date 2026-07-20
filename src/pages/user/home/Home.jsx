@@ -7,7 +7,7 @@ import {
   FaChartBar, 
   FaCalendarAlt, 
   FaTimes, 
-  FaLightbulb,
+  FaNewspaper,
   FaHome,
   FaKey,
   FaBookOpen,
@@ -19,7 +19,7 @@ import { supabase } from "../../../supabase/client";
 
 import "./home.css"; 
 
-// 📝 Ko'p tilli tarjimalar lug'ati
+// 📝 Ko'p tilli tarjimalar lug'ati (Yangiliklar uchun moslashtirildi)
 const translations = {
   uz: {
     place: "-o'rin",
@@ -28,8 +28,8 @@ const translations = {
     totalEntered: "Kiritilgan jami",
     activeCampaigns: "Faol Aksiyalar",
     noCampaigns: "Hozircha faol aksiyalar muddatida mavjud emas.",
-    adminTips: "Admin Maslahatlari",
-    noTips: "Maslahatlar mavjud emas.",
+    adminTips: "Yangiliklar va E'lonlar",
+    noTips: "Yangiliklar mavjud emas.",
     yearLabel: "Yil",
     monthLabel: "Oy",
     collectedPoints: "To'plangan ball",
@@ -42,7 +42,7 @@ const translations = {
     totalCodesMonth: "Oydagi jami kodlar",
     avgBonusPoint: "O'rtacha bonus ball",
     modalCampaign: "AKSIYA",
-    modalTip: "MASLAHAT",
+    modalTip: "YANGILIK",
     startDate: "Boshlanishi",
     endDate: "Tugashi",
     ta: "ta",
@@ -68,8 +68,8 @@ const translations = {
     totalEntered: "Всего введено",
     activeCampaigns: "Активные Акции",
     noCampaigns: "Активных акций пока нет.",
-    adminTips: "Советы от Админа",
-    noTips: "Советы отсутствуют.",
+    adminTips: "Новости и Объявления",
+    noTips: "Новости отсутствуют.",
     yearLabel: "Год",
     monthLabel: "Месяц",
     collectedPoints: "Собранные баллы",
@@ -82,7 +82,7 @@ const translations = {
     totalCodesMonth: "Всего кодов за месяц",
     avgBonusPoint: "Средний бонусный балл",
     modalCampaign: "АКЦИЯ",
-    modalTip: "СОВЕТ",
+    modalTip: "НОВОСТЬ",
     startDate: "Начало",
     endDate: "Конец",
     ta: "шт",
@@ -160,7 +160,6 @@ export default function HomeTab({
   const [isShopsOpen, setIsShopsOpen] = useState(false);
   const [shopsList, setShopsList] = useState([]);
   
-  // 🆕 STATISTIKA MODALI UCHUN YANGI SHTAT
   const [isStatOpen, setIsStatOpen] = useState(false);
 
   const t = translations[lang] || translations["uz"];
@@ -207,7 +206,7 @@ export default function HomeTab({
     return () => { isMounted = false; };
   }, []);
 
-  // MASLAHATLARNI YUKLASH
+  // YANGILIKLARNI YUKLASH
   useEffect(() => {
     let isMounted = true;
     const fetchNews = async () => {
@@ -220,7 +219,7 @@ export default function HomeTab({
         if (error) throw error;
         if (data && isMounted) setNews(data);
       } catch (error) {
-        console.error("Maslahatlarni yuklashda xatolik:", error);
+        console.error("Yangiliklarni yuklashda xatolik:", error);
       }
     };
     fetchNews();
@@ -453,7 +452,7 @@ export default function HomeTab({
           </button>
         </div>
 
-        {/* 🆕 TO'LIQ STATISTIKANI KO'RISH TUGMASI (Grafik o'rniga qo'yildi) */}
+        {/* TO'LIQ STATISTIKANI KO'RISH TUGMASI */}
         <div style={{ padding: "0 4px", marginBottom: "20px" }}>
           <button 
             onClick={() => setIsStatOpen(true)}
@@ -512,8 +511,10 @@ export default function HomeTab({
           )}
         </div>
 
-        {/* ADMIN MASLAHATLARI */}
-        <h3 className="section-title" style={{ marginTop: "24px" }}><FaLightbulb style={{ color: "#eab308", marginRight: "6px" }} /> {t.adminTips}</h3>
+        {/* YANGILIKLAR VA E'LONLAR */}
+        <h3 className="section-title" style={{ marginTop: "24px" }}>
+          <FaNewspaper style={{ color: "#2563eb", marginRight: "6px" }} /> {t.adminTips}
+        </h3>
         <div className="news-grid-container" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px", marginBottom: "24px" }}>
           {news.length > 0 ? (
             news.map((item) => (
@@ -534,7 +535,7 @@ export default function HomeTab({
       </div>
 
       {/* ==========================================================================
-          🗺 MODAL - BARCHA DO'KONLAR RO'YXATI
+          MAP MODAL - BARCHA DO'KONLAR RO'YXATI
           ========================================================================== */}
       {isShopsOpen && (
         <div className="home-modal-overlay" onClick={() => setIsShopsOpen(false)} style={{ zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -569,13 +570,12 @@ export default function HomeTab({
       )}
 
       {/* ==========================================================================
-          📊 🆕 YANGI MODAL - TO'LIQ GRAFIK VA STATISTIKA OYNASI
+          STATISTIKA MODALI
           ========================================================================== */}
       {isStatOpen && (
         <div className="home-modal-overlay" onClick={() => setIsStatOpen(false)} style={{ zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="home-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px", width: "94%", borderRadius: "24px", overflow: "hidden", padding: 0 }}>
             
-            {/* Modal bosh qismi */}
             <div style={{ background: "#f8fafc", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #e2e8f0" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <FaChartBar style={{ color: "#2563eb", fontSize: "20px" }} />
@@ -584,10 +584,8 @@ export default function HomeTab({
               <button onClick={() => setIsStatOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px", color: "#64748b" }}><FaTimes /></button>
             </div>
 
-            {/* Modal ichi */}
             <div style={{ padding: "20px", background: "#ffffff" }}>
               
-              {/* SANANI BELGILASH FILTRI */}
               <div className="filter-section" style={{ marginBottom: "16px" }}>
                 <div className="filter-group">
                   <label className="filter-label">{t.yearLabel}</label>
@@ -606,14 +604,12 @@ export default function HomeTab({
                 </div>
               </div>
 
-              {/* JAMBAL BALL */}
               <div className="total-score-box" style={{ marginBottom: "20px" }}>
                 <span className="score-title">{t.collectedPoints} ({month} - {year})</span>
                 <div className="score-divider"></div>
                 <span className="score-number" style={{ color: "#2563eb" }}>{filteredBonus} {t.points}</span>
               </div>
 
-              {/* GRAFIK CHIZMASI */}
               <div className="home-bottom-statistics" style={{ boxShadow: "none", padding: 0, border: "none" }}>
                 <div className="stats-header-row" style={{ marginBottom: "16px" }}>
                   <div className="stats-header-title">
@@ -662,7 +658,7 @@ export default function HomeTab({
         </div>
       )}
 
-      {/* DINAMIK MODAL (AKSIYA VA MASLAHATLAR UCHUN) */}
+      {/* DINAMIK MODAL (AKSIYA VA YANGILIKLAR UCHUN) */}
       {modalData && (
         <div className="home-modal-overlay" onClick={() => { setModalData(null); setModalType(""); }}>
           <div className="home-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -675,7 +671,7 @@ export default function HomeTab({
               </div>
             )}
             <div className="home-modal-body">
-              <span style={{ fontSize: "12px", background: modalType === "campaign" ? "#dbeafe" : "#fef08a", color: modalType === "campaign" ? "#1e40af" : "#854d0e", padding: "2px 8px", borderRadius: "12px", fontWeight: "600" }}>
+              <span style={{ fontSize: "12px", background: modalType === "campaign" ? "#dbeafe" : "#dbeafe", color: modalType === "campaign" ? "#1e40af" : "#1e40af", padding: "2px 8px", borderRadius: "12px", fontWeight: "600" }}>
                 {modalType === "campaign" ? t.modalCampaign : t.modalTip}
               </span>
               <h3 style={{ marginTop: "8px" }}>{modalData.title}</h3>

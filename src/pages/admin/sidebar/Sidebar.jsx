@@ -48,7 +48,7 @@ export default function Sidebar({
       magazin: "Sovg'alar Do'koni", 
       xarita: "Do'konlar Xaritasi", // 📍 O'zbekcha tarjima
       aksiya: "Aksiya Muddatlari",
-      news: "Yangiliklar va Maslahatlar",
+      news: "Yangiliklar",
       history: "Kodlar Tarixi (Foto)", 
       role: "Admin"
     },
@@ -61,7 +61,7 @@ export default function Sidebar({
       magazin: "Магазин Подарков", 
       xarita: "Карта Магазинов", // 📍 Ruscha tarjima
       aksiya: "Сроки Акций",
-      news: "Новости и Советы",
+      news: "Новости",
       history: "История Кодов (Фото)", 
       role: "Админ"
     }

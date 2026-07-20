@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../../supabase/client'; 
 import './katalog.css'; 
 
@@ -188,8 +188,21 @@ export default function UserCatalog() {
     return arr.find(c => c.key === "Turi" || c.key === "Тип")?.value;
   };
 
-  // 1-BOSQICH UCHUN: Barcha mavjud o'ziga xos Turlarni yig'ish
-  const allPumpTypes = [...new Set(products.map(p => getProductTypeValue(p)).filter(Boolean))];
+  // 1-BOSQICH UCHUN: "Вихревой" / "Vixrevoy" birinchi o'ringa saralanadi
+  const allPumpTypes = useMemo(() => {
+    const types = products.map(p => getProductTypeValue(p)).filter(Boolean);
+    const uniqueTypes = [...new Set(types)];
+
+    return uniqueTypes.sort((a, b) => {
+      const isTargetA = a.toLowerCase().includes("vixrevoy") || a.toLowerCase().includes("вихревой");
+      const isTargetB = b.toLowerCase().includes("vixrevoy") || b.toLowerCase().includes("вихревой");
+
+      if (isTargetA) return -1;
+      if (isTargetB) return 1;
+      
+      return a.localeCompare(b);
+    });
+  }, [products]);
 
   // 2-BOSQICH UCHUN: Tanlangan Tur ichidagi Kategoriyalarni ajratish
   const getCategoriesOfType = () => {

@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from "react";
-import { FaLightbulb, FaTrashAlt, FaPlusCircle, FaRegCommentDots, FaUpload, FaImage } from "react-icons/fa";
+import { FaNewspaper, FaTrashAlt, FaPlusCircle, FaRegCommentDots, FaUpload, FaImage } from "react-icons/fa";
 import { supabase } from "../../../supabase/client";
 import { toast } from "react-toastify";
 import "./news.css"; 
 
-export default function MaslahatlarTab({ lang = "uz" }) {
+export default function YangiliklarTab({ lang = "uz" }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState(""); 
-  const [imageUrl, setImageUrl] = useState(""); // Государство для ссылки на изображение
+  const [imageUrl, setImageUrl] = useState("");
   const [newsList, setNewsList] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false); // Состояние загрузки файла
+  const [uploading, setUploading] = useState(false);
 
-  // 🌍 Ko'p tillilik lug'ati / Словарь локализации
+  // 🌍 Ko'p tillilik lug'ati (Yangiliklar uchun moslashtirildi)
   const translations = {
     uz: {
-      formTitle: "Ustalar uchun Maslahatlar va Tavsiyalar",
-      formDesc: "Bu yerga yozilgan tavsiyalar yoki muhim gaplar bevosita ustalar (userlar) panelida ko'rinadi.",
-      labelTitle: " Nomlanishi *",
-      placeholderTitle: "Masalan yangilanishlar",
-      labelContent: "Maslahat Matni *",
-      placeholderContent: "Foydalanuvchilar ko'rishi kerak bo'lgan gaplar va tavsiyalarni yozing...",
+      formTitle: "Yangiliklar va E'lonlar",
+      formDesc: "Bu yerga yozilgan yangiliklar va e'lonlar bevosita foydalanuvchilar panelida ko'rinadi.",
+      labelTitle: "Yangilik Sarlavhasi *",
+      placeholderTitle: "Masalan: Tizimda yangi imkoniyatlar paydo bo'ldi",
+      labelContent: "Yangilik Matni *",
+      placeholderContent: "Foydalanuvchilar ko'rishi kerak bo'lgan yangilik yoki e'lonni yozing...",
       btnPublish: "E'lon Qilish",
       btnSaving: "Saqlanmoqda...",
       listTitle: "📋 Mavjud Yangiliklar",
@@ -28,12 +28,12 @@ export default function MaslahatlarTab({ lang = "uz" }) {
       thContent: "Matn",
       thDate: "Sana",
       thAction: "Amal",
-      emptyRow: "Hozircha hech qanday ma'lumot kiritilmagan.",
+      emptyRow: "Hozircha hech qanday yangilik kiritilmagan.",
       toastFieldsErr: "Iltimos, barcha maydonlarni to'ldiring!",
-      toastSuccess: "Yangi maslahat/yangilik muvaffaqiyatli qo'shildi! 💡",
-      toastDeleted: "Muvaffaqiyatli o'chirildi 🗑️",
-      confirmDelete: "Ushbu ma'lumotni o'chirib tashlamoqchimisiz?",
-      errorLoad: "Mavjud ma'lumotlarni yuklab bo'lmadi",
+      toastSuccess: "Yangi yangilik muvaffaqiyatli qo'shildi! 📰",
+      toastDeleted: "Yangilik muvaffaqiyatli o'chirildi 🗑️",
+      confirmDelete: "Ushbu yangilikni o'chirib tashlamoqchimisiz?",
+      errorLoad: "Mavjud yangiliklarni yuklab bo'lmadi",
       errorLoadConsole: "Ma'lumotlarni yuklashda xatolik:",
       errorAction: "Xatolik yuz berdi: ",
       uploadBtn: "Rasm tanlash",
@@ -43,28 +43,28 @@ export default function MaslahatlarTab({ lang = "uz" }) {
       imgText: "Rasm"
     },
     ru: {
-      formTitle: "Советы и Рекомендации для Мастеров",
-      formDesc: "Написанные здесь рекомендации или важные сообщения будут отображаться непосредственно в панели мастеров (пользователей).",
-      labelTitle: "Заголовок / Название *",
-      placeholderTitle: "Например: Обновления в платежной системе",
-      labelContent: "Текст Совета или Новости *",
-      placeholderContent: "Напишите сообщения и рекомендации, которые должны увидеть пользователи...",
+      formTitle: "Новости и Объявления",
+      formDesc: "Написанные здесь новости и объявления будут отображаться непосредственно в панели пользователей.",
+      labelTitle: "Заголовок Новости *",
+      placeholderTitle: "Например: Появились новые возможности в системе",
+      labelContent: "Текст Новости *",
+      placeholderContent: "Напишите новость или объявление, которое должны увидеть пользователи...",
       btnPublish: "Опубликовать",
       btnSaving: "Сохранение...",
-      listTitle: "📋 Доступные Советы и Новости",
+      listTitle: "📋 Доступные Новости",
       thTitle: "Заголовок",
       thContent: "Текст",
       thDate: "Дата",
       thAction: "Действие",
-      emptyRow: "На данный момент информация не введена.",
+      emptyRow: "На данный момент новости отсутствуют.",
       toastFieldsErr: "Пожалуйста, заполните все поля!",
-      toastSuccess: "Новый совет/новость успешно добавлен! 💡",
-      toastDeleted: "Успешно удалено 🗑️",
-      confirmDelete: "Вы действительно хотите удалить эту информацию?",
-      errorLoad: "Не удалось загрузить существующие данные",
+      toastSuccess: "Новая новость успешно добавлена! 📰",
+      toastDeleted: "Новость успешно удалена 🗑️",
+      confirmDelete: "Вы действительно хотите удалить эту новость?",
+      errorLoad: "Не удалось загрузить новости",
       errorLoadConsole: "Ошибка при загрузке данных:",
       errorAction: "Произошла ошибка: ",
-      uploadBtn: "Выбрать изображение с компьютера",
+      uploadBtn: "Выбрать изображение",
       uploadingText: "Изображение загружается...",
       uploadSuccess: "Изображение успешно загрузилось! 📸",
       uploadTypeErr: "Пожалуйста, выберите только файлы изображений!",
@@ -74,7 +74,6 @@ export default function MaslahatlarTab({ lang = "uz" }) {
 
   const t = translations[lang] || translations.uz;
 
-  // 1. Supabase-dagi 'news' jadvalidan ma'lumotlarni yuklash (useEffect ichiga olindi)
   useEffect(() => {
     const fetchNews = async () => {
       try {
@@ -94,7 +93,6 @@ export default function MaslahatlarTab({ lang = "uz" }) {
     fetchNews();
   }, [t.errorLoad, t.errorLoadConsole]);
 
-  // Qolgan funksiyalar uchun ro'yxatni yangilash mexanizmi
   const refreshNews = async () => {
     try {
       const { data, error } = await supabase
@@ -107,7 +105,6 @@ export default function MaslahatlarTab({ lang = "uz" }) {
     }
   };
 
-  // 📷 Rasmni Supabase Storage-ga yuklash funksiyasi
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -139,7 +136,6 @@ export default function MaslahatlarTab({ lang = "uz" }) {
     }
   };
 
-  // 2. Yangi maslahat/yangilik yaratish va bazaga yozish
   const handleCreateNews = async (e) => {
     e.preventDefault();
 
@@ -172,7 +168,6 @@ export default function MaslahatlarTab({ lang = "uz" }) {
     }
   };
 
-  // 3. O'chirish funksiyasi
   const handleDeleteNews = async (id) => {
     const isConfirmed = window.confirm(t.confirmDelete);
     if (!isConfirmed) return;
@@ -192,12 +187,12 @@ export default function MaslahatlarTab({ lang = "uz" }) {
   };
 
   return (
-    <div className="tab-section fade-in maslahatlar-container">
+    <div className="tab-section fade-in news-container">
       
-      {/* YANGI MASLAHAT/YANGILIK QO'SHISH FORMASI */}
+      {/* YANGI YANGILIK QO'SHISH FORMASI */}
       <div className="aksiya-card">
         <h4 className="aksiya-card-title">
-          <FaLightbulb style={{ color: "#eab308" }} /> {t.formTitle}
+          <FaNewspaper style={{ color: "#2563eb" }} /> {t.formTitle}
         </h4>
         <p className="aksiya-card-desc">
           {t.formDesc}
@@ -225,7 +220,7 @@ export default function MaslahatlarTab({ lang = "uz" }) {
             />
           </div>
 
-          {/* КНОПКА ЗАГРУЗКИ КАРТИНКИ */}
+          {/* RASM YUKLASH TUGMASI */}
           <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "15px", flexWrap: "wrap" }}>
             <div style={{ position: "relative", flex: 1 }}>
               <label htmlFor="news-file-upload" style={{
@@ -254,22 +249,22 @@ export default function MaslahatlarTab({ lang = "uz" }) {
               />
             </div>
 
-            {/* Превью картинки при наличии ссылки */}
+            {/* Rasm prevyusi */}
             {imageUrl && (
               <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f0fdf4", padding: "6px 12px", borderRadius: "6px", border: "1px solid #bbf7d0" }}>
                 <img src={imageUrl} alt="Uploaded preview" style={{ width: "35px", height: "35px", objectFit: "cover", borderRadius: "4px" }} />
-                <span style={{ fontSize: "12px", color: "#16a34a" }}>✓ Ready</span>
+                <span style={{ fontSize: "12px", color: "#16a34a" }}>✓ Tayyor</span>
               </div>
             )}
           </div>
 
-          <button type="submit" disabled={loading || uploading} className="btn-submit" style={{ background: "#eab308" }}>
+          <button type="submit" disabled={loading || uploading} className="btn-submit" style={{ background: "#2563eb" }}>
             <FaPlusCircle /> {loading ? t.btnSaving : t.btnPublish}
           </button>
         </form>
       </div>
 
-      {/* MAVJUD RO'YXAT JADBAlI */}
+      {/* RO'YXAT JADBAlI */}
       <div className="aksiya-card">
         <h4 className="aksiya-card-title">{t.listTitle}</h4>
         
