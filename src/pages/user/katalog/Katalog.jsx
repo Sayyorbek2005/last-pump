@@ -111,7 +111,7 @@ const translations = {
     noSpecs: "Xususiyatlar kiritilmagan",
     noProducts: "Mos keladigan mahsulotlar topilmadi.",
     close: "Yopish",
-    goHome: "🏠 Asosiy sahifaga qaytish"
+    goHome: "Asosiy sahifaga qaytish"
   },
   ru: {
     title: "Каталог Насосов",
@@ -133,7 +133,7 @@ const translations = {
     noSpecs: "Характеристики не указаны",
     noProducts: "Совпадающие товары не найдены.",
     close: "Закрыть",
-    goHome: "🏠 Вернуться на главную"
+    goHome: "Вернуться на главную"
   }
 };
 
@@ -208,79 +208,20 @@ export default function UserCatalog() {
 
   // Asosiy sahifaga yo'naltirish funksiyasi
   const handleGoHome = () => {
-    window.location.href = "/"; // Agar React Router ishlatayotgan bo'lsangiz navigate("/") ga o'zgartirishingiz mumkin
+    window.location.href = "/";
   };
 
   return (
     <div className="user-katalog-wrapper">
       <div className="user-katalog-max">
         
-        {/* YANGI NAVIGATSIYA PANEL (BANNER VA SEARCH ALMASHTIRILDI) */}
-        <div className="user-katalog-navigation-bar" style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '14px',
-          padding: '14px 20px',
-          marginBottom: '20px',
-          gap: '12px',
-          flexWrap: 'wrap'
-        }}>
-          <h1 style={{ fontSize: '20px', fontWeight: '700', margin: 0, color: '#0f172a' }}>
-            {t.title}
-          </h1>
-          <button 
-            onClick={handleGoHome}
-            className="user-go-home-btn"
-            style={{
-              background: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              padding: '10px 18px',
-              borderRadius: '10px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'background 0.2s',
-              boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)'
-            }}
-            onMouseOver={(e) => e.target.style.background = '#1d4ed8'}
-            onMouseOut={(e) => e.target.style.background = '#2563eb'}
-          >
-            {t.goHome}
+        {/* NAVIGATSIYA TUGMASI */}
+        <div className="user-katalog-navigation-bar">
+          <button onClick={handleGoHome} className="user-go-home-btn">
+            <span className="btn-icon">←</span>
+            <span>{t.goHome}</span>
           </button>
         </div>
-
-        {/* BREADCRUMBS (NAVIGATSIYA CHIZIG'I) */}
-        {/* <div className="user-breadcrumbs">
-          <button 
-            onClick={() => { setSelectedType(null); setSelectedCategory(null); }} 
-            className={`crumb-btn ${!selectedType ? 'active' : ''}`}
-          >
-            {t.mainCatalog}
-          </button>
-          
-          {selectedType && (
-            <>
-              <span className="crumb-sep">/</span>
-              <button 
-                onClick={() => { setSelectedCategory(null); }} 
-                className={`crumb-btn ${selectedType && !selectedCategory ? 'active' : ''}`}
-              >
-                {selectedType}
-              </button>
-            </>
-          )}
-
-          {selectedCategory && (
-            <>
-              <span className="crumb-sep">/</span>
-              <span className="crumb-current">{selectedCategory.toUpperCase()}</span>
-            </>
-          )}
-        </div> */}
 
         {loading ? (
           <div className="user-spinner-box">
@@ -387,13 +328,13 @@ export default function UserCatalog() {
                             <span className="prod-id-tag">ID: {item.id}</span>
                           </div>
                           
-                          <p className="prod-desc-text" style={{ fontSize: '13px', color: '#666', margin: '8px 0', lineHeight: '1.4' }}>
+                          <p className="prod-desc-text">
                             {lang === 'uz' ? (item.description_uz || item.description || t.noDescription) : (item.description_ru || item.description_uz || item.description || t.noDescription)}
                           </p>
                           
                           <div className="prod-footer-row">
                             <p className="prod-price-text">
-                              {item.price ? `${item.price.toLocaleString()} so'm` : t.agreedPrice}
+                              {item.price ? `$${item.price.toLocaleString()}` : t.agreedPrice}
                             </p>
                             <span className="user-action-view-btn">{t.viewMore}</span>
                           </div>
@@ -449,7 +390,7 @@ export default function UserCatalog() {
                   <div className="detail-box">
                     <span className="detail-label">{t.price}</span>
                     <p className="detail-val price-highlight">
-                      {viewingProductDetails.price ? `${viewingProductDetails.price.toLocaleString()} so'm` : t.agreedPrice}
+                      {viewingProductDetails.price ? `$${viewingProductDetails.price.toLocaleString()}` : t.agreedPrice}
                     </p>
                   </div>
                   

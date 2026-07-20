@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../../../supabase/client'; 
 import './katalog.css'; 
 
@@ -14,7 +14,7 @@ import img5KSE1 from "./assets2/5KSE-1.png";
 import img6SP1 from "./assets2/6SP-1.png";
 import img6SP46D4 from "./assets2/6SP46-D4.png";
 import imgATJSW from "./assets2/ATJSW.png";
-import imgCHLFT from "./assets2/CHLF(T)гиpng.png"; // Fayl nomini tekshiring
+import imgCHLFT from "./assets2/CHLF(T)гиpng.png";
 import imgCHL from "./assets2/CHLгиpng.png";
 import imgCHM from "./assets2/CHMгиpng.png";
 import imgCPm from "./assets2/CPm.png";
@@ -108,7 +108,7 @@ const autoFallbackImage = (title) => {
   if (name.includes("GRS")) {
     if (name.includes("25-4-6")) return imgGRS25_4_6;
     if (name.includes("-F")) return imgGRSF;
-    return imgGRSH; // Tuzatildi: Default holatda GRS=н qaytariladi
+    return imgGRSH;
   }
   if (name.includes("4GS")) return img4GS;
   if (name.includes("6SP")) return name.includes("46-D4") ? img6SP46D4 : img6SP1;
@@ -120,6 +120,13 @@ const autoFallbackImage = (title) => {
   if (name.includes("5KSE")) return img5KSE1;
 
   return imgImageOne;
+};
+
+// Yordamchi funksiya: xarakteristikalardan tur nomini olish
+const getTypeValue = (product) => {
+  const arr = product?.characteristics || product?.specs || [];
+  const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
+  return foundObj?.value ? foundObj.value.trim() : null;
 };
 
 // === 4. TARJIMALAR ===
@@ -135,7 +142,7 @@ const t = {
     countBadge: "ta turkum",
     pumpCount: "ta nasos",
     noTypes: "Tizimda hech qanday nasos turi topilmadi.",
-    noProducts: "Ushbu turkumda mahsulotlar mavjud emas.", // Tuzatildi
+    noProducts: "Ushbu turkumda mahsulotlar mavjud emas.",
     details: "Batafsil ma'lumot",
     prodId: "Mahsulot ID:",
     catCode: "Kategoriya kodi:",
@@ -149,7 +156,7 @@ const t = {
     save: "Saqlash",
     formNameUz: "Mahsulot nomi (O'zbekcha)",
     formNameRu: "Mahsulot nomi (Ruscha)",
-    formPrice: "Narxi (so'm)",
+    formPrice: "Narxi ($)",
     formCat: "Kategoriya (type_id)",
     formImg: "Rasm faylini tanlang",
     formTypeUz: "Turi (O'zbekcha)",
@@ -184,7 +191,7 @@ const t = {
     save: "Сохранить",
     formNameUz: "Название товара (Узбекский)",
     formNameRu: "Название товара (Русский)",
-    formPrice: "Цена (сум)",
+    formPrice: "Цена ($)",
     formCat: "Категория (type_id)",
     formImg: "Выберите файл изображения",
     formTypeUz: "Тип (На узбекском)",
@@ -216,7 +223,7 @@ export default function AdminCatalog({ lang }) {
     if (lang) setCurrentLang(lang);
   }, [lang]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -231,30 +238,20 @@ export default function AdminCatalog({ lang }) {
     } finally { 
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
 
-  // Performance Optimallashtirish: Barcha turlarni faqat products o'zgarganda hisoblash
   const allTypes = useMemo(() => {
-    const types = products.map(p => {
-      const arr = p?.characteristics || p?.specs || [];
-      const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
-      return foundObj?.value ? foundObj.value.trim() : null;
-    }).filter(Boolean);
+    const types = products.map(getTypeValue).filter(Boolean);
     return [...new Set(types)];
   }, [products]);
 
-  // Har bir turga tegishli nasoslar sonini hisoblash funksiyasi
-  const getTypeCount = (turiName) => {
-    return products.filter(p => {
-      const arr = p?.characteristics || p?.specs || [];
-      const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
-      return foundObj?.value ? foundObj.value.trim() === turiName : false;
-    }).length;
-  };
+  const getTypeCount = useCallback((turiName) => {
+    return products.filter(p => getTypeValue(p) === turiName).length;
+  }, [products]);
 
   const handleDelete = async (e, id) => {
     e.stopPropagation(); 
@@ -344,11 +341,7 @@ export default function AdminCatalog({ lang }) {
   };
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const arr = p?.characteristics || p?.specs || [];
-      const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
-      return foundObj?.value ? foundObj.value.trim() === selectedType : false;
-    });
+    return products.filter(p => getTypeValue(p) === selectedType);
   }, [products, selectedType]);
 
   const currentTranslation = t[currentLang] || t['uz'];
@@ -438,12 +431,12 @@ export default function AdminCatalog({ lang }) {
                           <span className="product-tag">{item?.type_id?.toUpperCase()}</span>
                           <img 
                             src={resolvedImage || imgImageOne} 
-                            alt={item?.title_uz} 
+                            alt={item?.title_uz || "Nasos"} 
                             className="product-catalog-img" 
                             style={{ width: '100%', height: '140px', objectFit: 'contain', padding: '5px' }}
                             onError={(e) => {
-                              e.target.onerror = null; // Cheksiz siklni oldini olish
-                              e.target.src = imgImageOne;
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = imgImageOne;
                             }}
                           />
                         </div>
@@ -455,7 +448,7 @@ export default function AdminCatalog({ lang }) {
                           </div>
                           
                           <div className="product-footer-action">
-                            <span className="product-price">{item?.price?.toLocaleString()} so'm</span>
+                            <span className="product-price">${item?.price?.toLocaleString()}</span>
                             <div className="admin-crud-group">
                               <button onClick={(e) => openEditModal(e, item)} className="btn-crud edit">✏️</button>
                               <button onClick={(e) => handleDelete(e, item.id)} className="btn-crud delete">🗑️</button>
@@ -495,7 +488,7 @@ export default function AdminCatalog({ lang }) {
                       : autoFallbackImage(viewingProductDetails?.title_uz || viewingProductDetails?.title_ru)} 
                     alt="Katta ko'rinish" 
                     style={{ maxHeight: '180px', maxWidth: '100%', objectFit: 'contain' }}
-                    onError={(e) => { e.target.src = imgImageOne; }}
+                    onError={(e) => { e.currentTarget.src = imgImageOne; }}
                   />
                 </div>
 
@@ -513,7 +506,7 @@ export default function AdminCatalog({ lang }) {
                 <div className="detail-row-grid">
                   <div className="detail-item-box">
                     <p className="detail-label">{currentTranslation.price}</p>
-                    <p className="detail-value price-color">{viewingProductDetails?.price?.toLocaleString()} so'm</p>
+                    <p className="detail-value price-color">${viewingProductDetails?.price?.toLocaleString()}</p>
                   </div>
                   <div className="detail-item-box">
                     <p className="detail-label">{currentTranslation.imgName}</p>
