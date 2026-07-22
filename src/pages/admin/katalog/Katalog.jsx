@@ -122,6 +122,15 @@ const autoFallbackImage = (title) => {
   return imgImageOne;
 };
 
+// Rasm URL manzilini aniqlovchi yordamchi funksiya (Online URL yoki Local Asset)
+const getProductImageSrc = (imgUrl, title) => {
+  if (!imgUrl) return autoFallbackImage(title);
+  if (imgUrl.startsWith("http://") || imgUrl.startsWith("https://")) {
+    return imgUrl; // Supabase Storage yoki Internetdagi rasm
+  }
+  return imageMapping[imgUrl.trim()] || autoFallbackImage(title);
+};
+
 // Yordamchi funksiya: xarakteristikalardan tur nomini olish
 const getTypeValue = (product) => {
   const arr = product?.characteristics || product?.specs || [];
@@ -158,7 +167,9 @@ const t = {
     formNameRu: "Mahsulot nomi (Ruscha)",
     formPrice: "Narxi ($)",
     formCat: "Kategoriya (type_id)",
-    formImg: "Rasm faylini tanlang",
+    formImgSelect: "Statik rasm tanlash",
+    formImgUpload: "Kompyuterdan yangi rasm yuklash",
+    uploading: "Rasm yuklanmoqda...",
     formTypeUz: "Turi (O'zbekcha)",
     formTypeRu: "Тип (Ruscha)",
     formVkhVykh: "Вх/Вых (Kirish/Chiqish)",
@@ -193,7 +204,9 @@ const t = {
     formNameRu: "Название товара (Русский)",
     formPrice: "Цена ($)",
     formCat: "Категория (type_id)",
-    formImg: "Выберите файл изображения",
+    formImgSelect: "Выбрать статическое изображение",
+    formImgUpload: "Загрузить новое фото с компьютера",
+    uploading: "Загрузка фото...",
     formTypeUz: "Тип (На узбекском)",
     formTypeRu: "Тип (На русском)",
     formVkhVykh: "Вх/Вых",
@@ -214,6 +227,11 @@ export default function AdminCatalog({ lang }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   
+  // Rasm yuklash holatlari
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
+
   const [formData, setFormData] = useState({
     title_uz: '', title_ru: '', price: '', image_url: '', type_id: '', 
     turi_uz: '', turi_ru: '', vkh_vykh: '', kw: '', lm: '', podyem: ''
@@ -282,6 +300,8 @@ export default function AdminCatalog({ lang }) {
   const openEditModal = (e, product) => {
     e.stopPropagation();
     setEditingProduct(product);
+    setImageFile(null);
+    setPreviewImage(null);
     
     const targetArray = product?.characteristics || product?.specs || [];
     
@@ -303,6 +323,8 @@ export default function AdminCatalog({ lang }) {
 
   const openCreateModal = () => {
     setEditingProduct(null);
+    setImageFile(null);
+    setPreviewImage(null);
     setFormData({ 
       title_uz: '', title_ru: '', price: '', image_url: '', type_id: '', 
       turi_uz: selectedType || '', turi_ru: selectedType || '',
@@ -311,43 +333,85 @@ export default function AdminCatalog({ lang }) {
     setIsModalOpen(true);
   };
 
+  // Kompyuterdan yangi rasm tanlanganda runs
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setPreviewImage(URL.createObjectURL(file));
+      // Fayl tanlanganda dropdown tanlovini tozalaymiz
+      setFormData(prev => ({ ...prev, image_url: '' }));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    const jsonFormat = [
-      { key: "Turi", value: formData.turi_uz.trim() },
-      { key: "Тип", value: formData.turi_ru.trim() },
-      { key: "Вх/Вых", value: formData.vkh_vykh.trim() },
-      { key: "кВт", value: formData.kw.trim() },
-      { key: "л/м", value: formData.lm.trim() },
-      { key: "Подъём", value: formData.podyem.trim() }
-    ];
+    let finalImageUrl = formData.image_url;
 
-    const productData = {
-      title_uz: formData.title_uz,
-      title_ru: formData.title_ru,
-      price: parseFloat(formData.price) || 0,
-      image_url: formData.image_url || null,
-      type_id: formData.type_id.toLowerCase().trim(),
-      characteristics: jsonFormat,
-      specs: jsonFormat
-    };
+    try {
+      setUploadingImage(true);
 
-    let error;
-    if (editingProduct) {
-      const res = await supabase.from('products').update(productData).eq('id', editingProduct.id);
-      error = res.error;
-    } else {
-      const res = await supabase.from('products').insert([productData]);
-      error = res.error;
-    }
+      // Agar kompyuterdan yangi rasm fayli tanlangan bo'lsa, uni Supabase Storage-ga yuklaymiz
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+        const filePath = `products/${fileName}`;
 
-    if (error) {
-      alert(error.message);
-    } else {
-      alert(currentLang === 'uz' ? "Muvaffaqiyatli saqlandi!" : "Успешно сохранено!");
-      setIsModalOpen(false);
-      fetchProducts();
+        // 'product-images' bu sizning Supabase Storage Bucket nomingiz
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, imageFile);
+
+        if (uploadError) {
+          throw new Error("Rasm yuklashda xatolik: " + uploadError.message);
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        finalImageUrl = publicUrlData.publicUrl;
+      }
+
+      const jsonFormat = [
+        { key: "Turi", value: formData.turi_uz.trim() },
+        { key: "Тип", value: formData.turi_ru.trim() },
+        { key: "Вх/Вых", value: formData.vkh_vykh.trim() },
+        { key: "кВт", value: formData.kw.trim() },
+        { key: "л/м", value: formData.lm.trim() },
+        { key: "Подъём", value: formData.podyem.trim() }
+      ];
+
+      const productData = {
+        title_uz: formData.title_uz,
+        title_ru: formData.title_ru,
+        price: parseFloat(formData.price) || 0,
+        image_url: finalImageUrl || null,
+        type_id: formData.type_id.toLowerCase().trim(),
+        characteristics: jsonFormat,
+        specs: jsonFormat
+      };
+
+      let error;
+      if (editingProduct) {
+        const res = await supabase.from('products').update(productData).eq('id', editingProduct.id);
+        error = res.error;
+      } else {
+        const res = await supabase.from('products').insert([productData]);
+        error = res.error;
+      }
+
+      if (error) {
+        alert(error.message);
+      } else {
+        alert(currentLang === 'uz' ? "Muvaffaqiyatli saqlandi!" : "Успешно сохранено!");
+        setIsModalOpen(false);
+        fetchProducts();
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -432,16 +496,14 @@ export default function AdminCatalog({ lang }) {
                 
                 <div className="products-light-grid">
                   {filteredProducts.map(item => {
-                    const resolvedImage = (item?.image_url && imageMapping[item.image_url.trim()]) 
-                      ? imageMapping[item.image_url.trim()] 
-                      : autoFallbackImage(item?.title_uz || item?.title_ru);
+                    const resolvedImage = getProductImageSrc(item?.image_url, item?.title_uz || item?.title_ru);
 
                     return (
                       <div key={item.id} onClick={() => setViewingProductDetails(item)} className="product-light-card">
                         <div className="product-img-box">
                           <span className="product-tag">{item?.type_id?.toUpperCase()}</span>
                           <img 
-                            src={resolvedImage || imgImageOne} 
+                            src={resolvedImage} 
                             alt={item?.title_uz || "Nasos"} 
                             className="product-catalog-img" 
                             style={{ width: '100%', height: '140px', objectFit: 'contain', padding: '5px' }}
@@ -494,9 +556,7 @@ export default function AdminCatalog({ lang }) {
               <div className="modal-body-content">
                 <div style={{ textAlign: 'center', marginBottom: '20px', background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
                   <img 
-                    src={(viewingProductDetails?.image_url && imageMapping[viewingProductDetails.image_url.trim()]) 
-                      ? imageMapping[viewingProductDetails.image_url.trim()] 
-                      : autoFallbackImage(viewingProductDetails?.title_uz || viewingProductDetails?.title_ru)} 
+                    src={getProductImageSrc(viewingProductDetails?.image_url, viewingProductDetails?.title_uz || viewingProductDetails?.title_ru)} 
                     alt="Katta ko'rinish" 
                     style={{ maxHeight: '180px', maxWidth: '100%', objectFit: 'contain' }}
                     onError={(e) => { e.currentTarget.src = imgImageOne; }}
@@ -559,7 +619,7 @@ export default function AdminCatalog({ lang }) {
         {/* 4-BOSQICH: MODAL — QO'SHISH VA TAHRIRLASH */}
         {isModalOpen && (
           <div className="admin-modal-overlay">
-            <div className="admin-modal-card" style={{ maxWidth: '500px' }}>
+            <div className="admin-modal-card" style={{ maxWidth: '520px' }}>
               <div className="modal-header-light">
                 <h2>{editingProduct ? `✏️ ${currentTranslation.edit}` : `➕ ${currentTranslation.addBtn}`}</h2>
               </div>
@@ -587,18 +647,52 @@ export default function AdminCatalog({ lang }) {
                     </div>
                   </div>
 
-                  <div className="admin-form-group">
-                    <label>{currentTranslation.formImg}</label>
-                    <select 
-                      value={formData.image_url} 
-                      onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                      style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', background: '#fff' }}
-                    >
-                      <option value="">-- Rasm tanlang (Ixtiyoriy) --</option>
-                      {Object.keys(imageMapping).map((imgKey) => (
-                        <option key={imgKey} value={imgKey}>{imgKey}</option>
-                      ))}
-                    </select>
+                  {/* 📷 RASM TANLASH QISMI (IKKITA USUL: MAVJUD RASM YOKI YANGI FAYL YUKLASH) */}
+                  <div className="admin-form-group" style={{ background: '#f1f5f9', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    
+                    {/* 1. Kompyuterdan yangi rasm faylini yuklash */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontWeight: 'bold', color: '#0f172a' }}>📁 {currentTranslation.formImgUpload}:</label>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        style={{ width: '100%', marginTop: '5px' }}
+                      />
+                    </div>
+
+                    <div style={{ textAlign: 'center', fontSize: '12px', color: '#64748b', margin: '5px 0' }}>— YOKI —</div>
+
+                    {/* 2. Statik tayyor rasmlardan tanlash */}
+                    <div>
+                      <label style={{ fontWeight: 'bold', color: '#0f172a' }}>🖼️ {currentTranslation.formImgSelect}:</label>
+                      <select 
+                        value={formData.image_url} 
+                        onChange={(e) => {
+                          setFormData({...formData, image_url: e.target.value});
+                          setImageFile(null); // Statik rasm tanlanganda file yuklashni bekor qilish
+                          setPreviewImage(null);
+                        }}
+                        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', background: '#fff', marginTop: '5px' }}
+                      >
+                        <option value="">-- Statik rasm tanlang --</option>
+                        {Object.keys(imageMapping).map((imgKey) => (
+                          <option key={imgKey} value={imgKey}>{imgKey}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Prevyu ko'rsatish */}
+                    {(previewImage || formData.image_url) && (
+                      <div style={{ marginTop: '10px', textAlign: 'center' }}>
+                        <p style={{ fontSize: '11px', color: '#475569', marginBottom: '4px' }}>Tanlangan rasm ko'rinishi:</p>
+                        <img 
+                          src={previewImage || getProductImageSrc(formData.image_url, formData.title_uz)} 
+                          alt="Prevyu" 
+                          style={{ maxHeight: '80px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="form-row-split">
@@ -636,11 +730,11 @@ export default function AdminCatalog({ lang }) {
                 </div>
 
                 <div className="modal-footer-actions">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn-modal-action cancel">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn-modal-action cancel" disabled={uploadingImage}>
                     {currentTranslation.cancel}
                   </button>
-                  <button type="submit" className="btn-modal-action submit">
-                    {currentTranslation.save}
+                  <button type="submit" className="btn-modal-action submit" disabled={uploadingImage}>
+                    {uploadingImage ? currentTranslation.uploading : currentTranslation.save}
                   </button>
                 </div>
               </form>

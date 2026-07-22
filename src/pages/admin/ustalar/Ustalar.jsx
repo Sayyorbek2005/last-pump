@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { 
   FaEye, FaArrowLeft, FaPhoneAlt, FaMapMarkerAlt, 
   FaAward, FaBarcode, FaClock, FaCheckCircle, FaToggleOn, FaToggleOff,
-  FaSearch 
+  FaSearch, FaCalendarAlt
 } from "react-icons/fa";
 import { supabase } from "../../../supabase/client"; 
 import { toast } from "react-toastify";
@@ -25,6 +25,7 @@ export default function MastersTab({ mastersList = [], toggleMasterStatus, lang 
       totalBonus: "To'plangan jami bonus",
       unitBall: "ball",
       serviceRegion: "Xizmat ko'rsatish hududi",
+      registeredAt: "Ro'yxatdan o'tgan vaqti",
       notEntered: "Kiritilmagan",
       notIndicated: "Ko'rsatilmagan",
       historyTitle: "Skanerlangan Shtrix-kodlar Tarixi",
@@ -58,6 +59,7 @@ export default function MastersTab({ mastersList = [], toggleMasterStatus, lang 
       totalBonus: "Всего накоплено бонусов",
       unitBall: "баллов",
       serviceRegion: "Территория обслуживания",
+      registeredAt: "Дата регистрации",
       notEntered: "Не указано",
       notIndicated: "Не указано",
       historyTitle: "История отсканированных штрих-кодов",
@@ -144,9 +146,20 @@ export default function MastersTab({ mastersList = [], toggleMasterStatus, lang 
             </div>
             <div className="profile-main-info">
               <h2>{selectedMaster.full_name || t.notEntered}</h2>
-              <p className="profile-subtitle">{t.professionalMaster}</p>
+              <p className="profile-subtitle">{selectedMaster.job || t.professionalMaster}</p>
               <div className="profile-contact-row">
                 <span><FaPhoneAlt /> {selectedMaster.phone || "-"}</span>
+                
+                {/* 🕒 Ro'yxatdan o'tgan vaqti (Telefon yonida) */}
+                <span style={{ marginLeft: "15px" }}>
+                  <FaClock /> 
+                  {selectedMaster.created_at 
+                    ? new Date(selectedMaster.created_at).toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ", {
+                        year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"
+                      }) 
+                    : t.notIndicated}
+                </span>
+
                 <span className={selectedMaster.is_active !== false ? "status-badge-active" : "status-badge-inactive"}>
                   {selectedMaster.is_active !== false ? t.statusActive : t.statusInactive}
                 </span>
@@ -155,7 +168,7 @@ export default function MastersTab({ mastersList = [], toggleMasterStatus, lang 
           </div>
         </div>
 
-        {/* 📊 Tuzatilgan Statistika vidjetlari */}
+        {/* 📊 Statistika vidjetlari (4 ta karta qilindi) */}
         <div className="detail-stats-grid">
           
           {/* 1-Karta: Mahsulotlar */}
@@ -190,6 +203,23 @@ export default function MastersTab({ mastersList = [], toggleMasterStatus, lang 
               <h3>
                 {selectedMaster.region 
                   ? `${selectedMaster.region}${selectedMaster.district ? ` / ${selectedMaster.district}` : ""}`
+                  : t.notIndicated}
+              </h3>
+            </div>
+          </div>
+
+          {/* 4-Karta: Ro'yxatdan o'tgan vaqti */}
+          <div className="detail-stat-item-card">
+            <div className="card-icon-wrap purple-bg">
+              <FaCalendarAlt />
+            </div>
+            <div className="card-stat-value-wrap">
+              <span>{t.registeredAt}</span>
+              <h3 style={{ fontSize: "15px" }}>
+                {selectedMaster.created_at 
+                  ? new Date(selectedMaster.created_at).toLocaleString(lang === "ru" ? "ru-RU" : "uz-UZ", {
+                      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"
+                    })
                   : t.notIndicated}
               </h3>
             </div>

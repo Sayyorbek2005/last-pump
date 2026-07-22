@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../../supabase/client"; 
 import { 
@@ -8,7 +8,8 @@ import {
   FaBarcode, 
   FaCalendarAlt,
   FaCheckCircle,
-  FaGift
+  FaGift,
+  FaClock
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "./userdetals.css"; 
@@ -67,7 +68,7 @@ export default function UserDetails() {
   if (loading) return <div className="loading-container">Usta ma'lumotlari yuklanmoqda...</div>;
   if (!master) return <div className="loading-container">Usta topilmadi! ❌</div>;
 
-  // Avatar uchun ism-familiyaning bosh harflarini olish (Masalan: Samandar -> S)
+  // Avatar uchun ism-familiyaning bosh harflarini olish
   const avatarText = master.full_name 
     ? master.full_name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2)
     : "U";
@@ -89,12 +90,27 @@ export default function UserDetails() {
           </div>
           <div className="profile-main-info">
             <h2>{master.full_name || "Kiritilmagan"}</h2>
-            <p className="profile-subtitle">{master.role || "Professional Usta / Hamkor"}</p>
+            <p className="profile-subtitle">{master.job || master.role || "Professional Usta / Hamkor"}</p>
             
             <div className="profile-contact-row">
               <span className="contact-item">
                 <FaPhone className="contact-icon" /> {master.phone || "Ko'rsatilmagan"}
               </span>
+
+              {/* 🕒 Ro'yxatdan o'tgan vaqti */}
+              <span className="contact-item" style={{ marginLeft: "15px" }}>
+                <FaClock className="contact-icon" /> 
+                {master.created_at 
+                  ? new Date(master.created_at).toLocaleString("uz-UZ", {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit"
+                    })
+                  : "Noma'lum"}
+              </span>
+
               <span className={master.is_active !== false ? "status-badge-active" : "status-badge-inactive"}>
                 {master.is_active !== false ? "FAOL" : "FAOL EMAS"}
               </span>
@@ -103,18 +119,17 @@ export default function UserDetails() {
         </div>
       </div>
 
-      {/* 📊 Statistika Vidjetlari (Sizda ustma-ust tushib ketgan joy shu yerda tuzatildi) */}
+      {/* 📊 Statistika Vidjetlari */}
       <div className="detail-stats-grid">
         
         {/* 1-Karta: Skanerlanganlar */}
         <div className="detail-stat-item-card">
           <div className="card-icon-wrap blue-bg">
             <FaBarcode />
-            salom 
           </div>
           <div className="card-stat-value-wrap">
             <span className="card-stat-label">Jami skanerlangan</span>
-            <h3 className="card-stat-number">{scannedCodes.length} ta mahsulottttt</h3>
+            <h3 className="card-stat-number">{scannedCodes.length} ta mahsulot</h3>
           </div>
         </div>
 
@@ -125,7 +140,7 @@ export default function UserDetails() {
           </div>
           <div className="card-stat-value-wrap">
             <span className="card-stat-label">To'plangan jami bonus</span>
-            <h3 className="card-stat-number">0 ball</h3>
+            <h3 className="card-stat-number">{master.bonus || 0} ball</h3>
           </div>
         </div>
 
@@ -139,6 +154,27 @@ export default function UserDetails() {
             <h3 className="card-stat-number">
               {master.region 
                 ? `${master.region}${master.district ? `, ${master.district}` : ""}` 
+                : "Kiritilmagan"}
+            </h3>
+          </div>
+        </div>
+
+        {/* 4-Karta: Ro'yxatdan o'tgan sanasi va vaqti */}
+        <div className="detail-stat-item-card">
+          <div className="card-icon-wrap purple-bg">
+            <FaCalendarAlt />
+          </div>
+          <div className="card-stat-value-wrap">
+            <span className="card-stat-label">Ro'yxatdan o'tgan vaqti</span>
+            <h3 className="card-stat-number" style={{ fontSize: "15px" }}>
+              {master.created_at 
+                ? new Date(master.created_at).toLocaleString("uz-UZ", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })
                 : "Kiritilmagan"}
             </h3>
           </div>

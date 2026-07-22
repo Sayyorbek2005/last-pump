@@ -148,6 +148,18 @@ export default function UserCatalog() {
   const [selectedCategory, setSelectedCategory] = useState(null); 
   const [viewingProductDetails, setViewingProductDetails] = useState(null); 
 
+  // === RASM URLLARINI ANIQLASH MANTIQI ===
+  const getProductImageUrl = (url) => {
+    if (!url) return null;
+    const trimmed = url.trim();
+    // 1. Agar admin Supabase Storage'ga yuklagan bo'lsa (URL http/https bilan boshlanadi)
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    // 2. Aks holda statik xaritadan izlaydi
+    return imageMapping[trimmed] || null;
+  };
+
   useEffect(() => {
     const handleStorageChange = () => {
       setLang(localStorage.getItem('lang') || 'uz');
@@ -182,13 +194,11 @@ export default function UserCatalog() {
     fetchProducts();
   }, []);
 
-  // Yordamchi funksiya: Mahsulotning "Turi / Тип" qiymatini olish
   const getProductTypeValue = (p) => {
     const arr = p.characteristics || p.specs || [];
     return arr.find(c => c.key === "Turi" || c.key === "Тип")?.value;
   };
 
-  // 1-BOSQICH UCHUN: "Вихревой" / "Vixrevoy" birinchi o'ringa saralanadi
   const allPumpTypes = useMemo(() => {
     const types = products.map(p => getProductTypeValue(p)).filter(Boolean);
     const uniqueTypes = [...new Set(types)];
@@ -204,13 +214,11 @@ export default function UserCatalog() {
     });
   }, [products]);
 
-  // 2-BOSQICH UCHUN: Tanlangan Tur ichidagi Kategoriyalarni ajratish
   const getCategoriesOfType = () => {
     const filtered = products.filter(p => getProductTypeValue(p) === selectedType);
     return [...new Set(filtered.map(p => p.type_id).filter(Boolean))];
   };
 
-  // 3-BOSQICH UCHUN: Yakuniy modellarni filtrlash
   const filteredProducts = products.filter(p => {
     const turiValue = getProductTypeValue(p);
     const matchesType = turiValue === selectedType;
@@ -219,7 +227,6 @@ export default function UserCatalog() {
     return matchesType && matchesCategory;
   });
 
-  // Asosiy sahifaga yo'naltirish funksiyasi
   const handleGoHome = () => {
     window.location.href = "/";
   };
@@ -228,7 +235,6 @@ export default function UserCatalog() {
     <div className="user-katalog-wrapper">
       <div className="user-katalog-max">
         
-        {/* NAVIGATSIYA TUGMASI */}
         <div className="user-katalog-navigation-bar">
           <button onClick={handleGoHome} className="user-go-home-btn">
             <span className="btn-icon">←</span>
@@ -315,45 +321,48 @@ export default function UserCatalog() {
 
                 <div className="user-products-grid">
                   {filteredProducts.length > 0 ? (
-                    filteredProducts.map(item => (
-                      <div 
-                        key={item.id} 
-                        className="admin-product-card" 
-                        onClick={() => setViewingProductDetails(item)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="prod-img-box">
-                          <span className="prod-tag">{item.type_id?.toUpperCase()}</span>
-                          {item.image_url && imageMapping[item.image_url.trim()] ? (
-                            <img 
-                              src={imageMapping[item.image_url.trim()]} 
-                              alt={item.title_uz} 
-                              className="product-main-img" 
-                            />
-                          ) : (
-                            <span className="placeholder-icon">📦</span>
-                          )}
-                        </div>
-                        
-                        <div className="prod-details-box">
-                          <div className="title-row">
-                            <h3>{lang === 'uz' ? item.title_uz : (item.title_ru || item.title_uz)}</h3>
-                            <span className="prod-id-tag">ID: {item.id}</span>
+                    filteredProducts.map(item => {
+                      const imgSource = getProductImageUrl(item.image_url);
+                      return (
+                        <div 
+                          key={item.id} 
+                          className="admin-product-card" 
+                          onClick={() => setViewingProductDetails(item)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="prod-img-box">
+                            <span className="prod-tag">{item.type_id?.toUpperCase()}</span>
+                            {imgSource ? (
+                              <img 
+                                src={imgSource} 
+                                alt={item.title_uz} 
+                                className="product-main-img" 
+                              />
+                            ) : (
+                              <span className="placeholder-icon">📦</span>
+                            )}
                           </div>
                           
-                          <p className="prod-desc-text">
-                            {lang === 'uz' ? (item.description_uz || item.description || t.noDescription) : (item.description_ru || item.description_uz || item.description || t.noDescription)}
-                          </p>
-                          
-                          <div className="prod-footer-row">
-                            <p className="prod-price-text">
-                              {item.price ? `$${item.price.toLocaleString()}` : t.agreedPrice}
+                          <div className="prod-details-box">
+                            <div className="title-row">
+                              <h3>{lang === 'uz' ? item.title_uz : (item.title_ru || item.title_uz)}</h3>
+                              <span className="prod-id-tag">ID: {item.id}</span>
+                            </div>
+                            
+                            <p className="prod-desc-text">
+                              {lang === 'uz' ? (item.description_uz || item.description || t.noDescription) : (item.description_ru || item.description_uz || item.description || t.noDescription)}
                             </p>
-                            <span className="user-action-view-btn">{t.viewMore}</span>
+                            
+                            <div className="prod-footer-row">
+                              <p className="prod-price-text">
+                                {item.price ? `$${item.price.toLocaleString()}` : t.agreedPrice}
+                              </p>
+                              <span className="user-action-view-btn">{t.viewMore}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="user-no-data">
                       <p>{t.noProducts}</p>
@@ -376,9 +385,9 @@ export default function UserCatalog() {
               
               <div className="user-modal-body">
                 <div className="user-modal-image-wrapper">
-                  {viewingProductDetails.image_url && imageMapping[viewingProductDetails.image_url.trim()] ? (
+                  {getProductImageUrl(viewingProductDetails.image_url) ? (
                     <img 
-                      src={imageMapping[viewingProductDetails.image_url.trim()]} 
+                      src={getProductImageUrl(viewingProductDetails.image_url)} 
                       alt="Katta rasm" 
                       className="user-modal-large-img"
                     />
