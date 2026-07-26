@@ -254,9 +254,10 @@ export default function HomeTab({
         const startDate = new Date(parseInt(year), monthIndex, 1, 0, 0, 0).toISOString();
         const endDate = new Date(parseInt(year), monthIndex + 1, 1, 0, 0, 0).toISOString();
 
+        // 💡 "points" ustunini ham bazadan chaqirib olamiz
         const { data: codes, error } = await supabase
           .from("used_codes") 
-          .select("created_at, status")
+          .select("created_at, status, points") 
           .eq("user_id", activeUserId)
           .gte("created_at", startDate)
           .lt("created_at", endDate);
@@ -265,11 +266,17 @@ export default function HomeTab({
         if (!isMounted) return;
 
         const approvedCodes = codes ? codes.filter(c => c.status === "approved" || c.status === "confirmed") : [];
-        const confirmedBonusSum = approvedCodes.length; 
+        
+        // 💡 Har bir kodning o'z ballini yig'ib chiqamiz (agar points mavjud bo'lmasa, sukut bo'yicha 1 olinadi)
+        const confirmedBonusSum = approvedCodes.reduce((sum, c) => sum + (Number(c.points) || 1), 0);
+        const totalCodesCount = codes ? codes.length : 0;
         
         setFilteredBonus(confirmedBonusSum);
-        setMonthlyTotalCodes(codes ? codes.length : 0);
-        setMonthlyAverageBonus(confirmedBonusSum > 0 ? "1.0" : "0.0");
+        setMonthlyTotalCodes(totalCodesCount);
+        
+        // 💡 O'rtacha bonus ballni to'g'ri hisoblash
+        const avgBonus = approvedCodes.length > 0 ? (confirmedBonusSum / approvedCodes.length).toFixed(1) : "0.0";
+        setMonthlyAverageBonus(avgBonus);
 
         let generatedStats = [];
         const joriyVaqt = new Date();
@@ -283,7 +290,11 @@ export default function HomeTab({
 
           generatedStats = last7Days.map(date => {
             const dayStr = date.toLocaleDateString(lang === "ru" ? 'ru-RU' : 'uz-UZ', { day: 'numeric', month: 'short' });
-            const dayVal = approvedCodes.filter(c => new Date(c.created_at).toDateString() === date.toDateString()).length;
+            
+            // Shu kunga to'g'ri kelgan tasdiqlangan kodlarning ballarini yig'amiz
+            const dayCodes = approvedCodes.filter(c => new Date(c.created_at).toDateString() === date.toDateString());
+            const dayVal = dayCodes.reduce((sum, c) => sum + (Number(c.points) || 1), 0);
+
             return { label: dayStr, realVal: dayVal, active: joriyVaqt.toDateString() === date.toDateString() };
           });
 
@@ -291,7 +302,7 @@ export default function HomeTab({
           const daysMap = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 0: 0 };
           approvedCodes.forEach(c => {
             const day = new Date(c.created_at).getDay(); 
-            daysMap[day] += 1;
+            daysMap[day] += (Number(c.points) || 1);
           });
           const labels = t.weekLabels;
           const JS_DAYS_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -305,10 +316,11 @@ export default function HomeTab({
           const weeksMap = { H1: 0, H2: 0, H3: 0, H4: 0 };
           approvedCodes.forEach(c => {
             const dayOfMonth = new Date(c.created_at).getDate();
-            if (dayOfMonth <= 7) weeksMap.H1 += 1;
-            else if (dayOfMonth <= 14) weeksMap.H2 += 1;
-            else if (dayOfMonth <= 21) weeksMap.H3 += 1;
-            else weeksMap.H4 += 1;
+            const codePoint = Number(c.points) || 1;
+            if (dayOfMonth <= 7) weeksMap.H1 += codePoint;
+            else if (dayOfMonth <= 14) weeksMap.H2 += codePoint;
+            else if (dayOfMonth <= 21) weeksMap.H3 += codePoint;
+            else weeksMap.H4 += codePoint;
           });
           const joriyKun = joriyVaqt.getDate();
           const isCurrentMonth = joriyVaqt.getFullYear() === parseInt(year) && joriyVaqt.getMonth() === monthIndex;
@@ -534,9 +546,7 @@ export default function HomeTab({
         </div>
       </div>
 
-      {/* ==========================================================================
-          MAP MODAL - BARCHA DO'KONLAR RO'YXATI
-          ========================================================================== */}
+      {/* MAP MODAL */}
       {isShopsOpen && (
         <div className="home-modal-overlay" onClick={() => setIsShopsOpen(false)} style={{ zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="home-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "440px", width: "92%", borderRadius: "24px", overflow: "hidden", padding: 0 }}>
@@ -569,9 +579,7 @@ export default function HomeTab({
         </div>
       )}
 
-      {/* ==========================================================================
-          STATISTIKA MODALI
-          ========================================================================== */}
+      {/* STATISTIKA MODALI */}
       {isStatOpen && (
         <div className="home-modal-overlay" onClick={() => setIsStatOpen(false)} style={{ zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="home-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px", width: "94%", borderRadius: "24px", overflow: "hidden", padding: 0 }}>
@@ -658,7 +666,7 @@ export default function HomeTab({
         </div>
       )}
 
-      {/* DINAMIK MODAL (AKSIYA VA YANGILIKLAR UCHUN) */}
+      {/* DINAMIK MODAL */}
       {modalData && (
         <div className="home-modal-overlay" onClick={() => { setModalData(null); setModalType(""); }}>
           <div className="home-modal-content" onClick={(e) => e.stopPropagation()}>

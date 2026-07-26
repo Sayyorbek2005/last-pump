@@ -48,7 +48,8 @@ export default function DashboardTab({
       errorReject: "Rad etishda xatolik yuz berdi",
       noTableData: "Tasdiqlash kutilayotgan so'rovlar mavjud emas 🔍",
       unit: "ta",
-      loadingText: "Yuklanmoqda..."
+      loadingText: "Yuklanmoqda...",
+      errPausedCode: "DIQQAT: Bu promo-kod admin tomonidan PAUZA qilingan! Tasdiqlab bo'lmaydi. ⏸️"
     },
     ru: {
       totalUsers: "Всего Пользователей",
@@ -70,7 +71,8 @@ export default function DashboardTab({
       errorReject: "Ошибка при отклонении кодов",
       noTableData: "Ожидающих запросов нет 🔍",
       unit: "шт",
-      loadingText: "Загрузка..."
+      loadingText: "Загрузка...",
+      errPausedCode: "ВНИМАНИЕ: Этот промокод ПРИОСТАНОВЛЕН администратором! Подтверждение невозможно. ⏸️"
     }
   };
 
@@ -89,7 +91,7 @@ export default function DashboardTab({
           user_id,
           code_id,
           profiles ( full_name, phone, region ),
-          promo_codes ( code )
+          promo_codes ( id, code, is_active, points )
         `)
         .eq("status", "pending")
         .order("created_at", { ascending: true });
@@ -108,21 +110,69 @@ export default function DashboardTab({
     fetchPendingRequests();
   }, []);
 
-  // --- TASDIQLASH FUNKSIYASI ---
+  // --- TASDIQLASH FUNKSIYASI (Promo-kodning o'z balli bilan qo'shish) ---
   const handleApproveBonus = async (request) => {
     setActionLoadingId({ id: request.id, type: "approve" });
     try {
-      // used_codes jadvalida statusni 'approved' ga o'zgartiramiz.
-      // Qolgan barcha balans amallari Supabase-dagi trigger zimmasiga yuklangan!
+      // 1. Bazadan kodning is_active va points (ball) qiymatini tekshiramiz
+      const { data: promoCheck, error: promoCheckErr } = await supabase
+        .from("promo_codes")
+        .select("is_active, points")
+        .eq("id", request.code_id)
+        .single();
+
+      // Agar is_active false bo'lsa yoki topilmasa - demak kod pauza qilingan!
+      if (promoCheckErr || !promoCheck || promoCheck.is_active === false) {
+        toast.error(t.errPausedCode);
+        
+        await supabase
+          .from("used_codes")
+          .update({ status: "rejected" })
+          .eq("id", request.id);
+
+        fetchPendingRequests();
+        return;
+      }
+
+      // 🔍 Promo-kod bazada nechta ball ekanligini olamiz (agar bo'sh bo'lsa 2 deb oladi)
+      const codePoints = Number(promoCheck.points) || 2;
+
+      // 2. used_codes statusini 'approved' qilamiz va ballni ham yozamiz
       const { error: statusError } = await supabase
         .from("used_codes")
-        .update({ status: "approved" })
+        .update({ 
+          status: "approved",
+          points: codePoints 
+        })
         .eq("id", request.id);
 
       if (statusError) throw statusError;
 
-      toast.success(lang === "uz" ? "Kod tasdiqlandi! 🎉" : "Код подтвержден! 🎉");
-      
+      // 3. MASTERGA ANIQ BALLNI QO'SHISH ('score' va 'bonus' ga)
+      const { data: profileData, error: profileFetchErr } = await supabase
+        .from("profiles")
+        .select("score, bonus")
+        .eq("id", request.user_id)
+        .single();
+
+      if (!profileFetchErr && profileData) {
+        const currentScore = profileData.score || 0;
+        const currentBonus = profileData.bonus || 0;
+        
+        const { error: scoreUpdateErr } = await supabase
+          .from("profiles")
+          .update({ 
+            score: currentScore + codePoints,
+            bonus: currentBonus + codePoints 
+          })
+          .eq("id", request.user_id);
+
+        if (scoreUpdateErr) {
+          console.error("Ballni yangilashda xatolik:", scoreUpdateErr.message);
+        }
+      }
+
+      toast.success(lang === "uz" ? `Kod tasdiqlandi va +${codePoints} ball qo'shildi! 🎉` : `Код подтвержден и добавлено +${codePoints} балл! 🎉`);
       fetchPendingRequests();
     } catch (err) {
       console.error("Tasdiqlash xatoligi:", err.message);
@@ -136,7 +186,6 @@ export default function DashboardTab({
   const handleRejectBonus = async (request) => {
     setActionLoadingId({ id: request.id, type: "reject" });
     try {
-      // used_codes jadvalida statusni 'rejected' qilamiz.
       const { error: rejectError } = await supabase
         .from("used_codes")
         .update({ status: "rejected" })
@@ -145,7 +194,6 @@ export default function DashboardTab({
       if (rejectError) throw rejectError;
 
       toast.warn(t.actionRejected);
-      
       fetchPendingRequests();
     } catch (err) {
       console.error("Rad etish xatoligi:", err.message);
@@ -227,12 +275,12 @@ export default function DashboardTab({
         </div>
       </div>
 
-      {/* 📋 TASDIQLASH VA BEKOR QILISH KUTILAYOTGAN KODLAR JADVALI */}
+      {/* 📋 TASDIQLASH VA BEKOR QILISH KUTILAYOTGAN KODLAR Jadvali */}
       <div className="chart-fullwidth-section" style={{ marginTop: "30px", padding: "20px" }}>
         <h4 className="chart-title" style={{ marginBottom: "20px" }}>{t.tableTitle}</h4>
         
         {tableLoading ? (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "4px", gap: "10px", color: "#64748b" }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "20px", gap: "10px", color: "#64748b" }}>
             <FaSpinner className="spinner-anime" /> <span>{t.loadingText}</span>
           </div>
         ) : (

@@ -24,6 +24,9 @@ export default function AdminDash() {
   const [loading, setLoading] = useState(false);
   const [lang, setLang] = useState(localStorage.getItem("app_lang") || "uz");
 
+  // 💵 Dollar kursini saqlash uchun yangi State (odatiy 12800 so'm)
+  const [usdRate, setUsdRate] = useState(12800);
+
   const [stats, setStats] = useState({ totalUsers: 0, activeMasters: 0, totalCodes: 0, newClients: 0 });
   const [topMasters, setTopMasters] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -35,6 +38,26 @@ export default function AdminDash() {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const navigate = useNavigate();
+
+  // 💵 SUPABASE'DAN DOLLAR KURSINI OLISH
+  const fetchUsdRate = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("shop_settings")
+        .select("usd_rate")
+        .eq("id", 1)
+        .single();
+
+      if (data && data.usd_rate) {
+        setUsdRate(data.usd_rate);
+      }
+      if (error) {
+        console.error("Dollar kursini yuklashda xatolik:", error.message);
+      }
+    } catch (err) {
+      console.error("Xatolik:", err);
+    }
+  }, []);
 
   // 🌐 TILNI ALMASHTIRISH VA NOTIFICATION
   const changeLanguage = async (newLang) => {
@@ -127,7 +150,7 @@ export default function AdminDash() {
     }
   }, []);
 
-  // ADMIN STATUSINI TEKSHIRISH
+  // ADMIN STATUSINI VA KURSNI TEKSHIRISH
   useEffect(() => {
     const checkAdminStatus = async () => {
       const storedUser = localStorage.getItem("user");
@@ -140,10 +163,13 @@ export default function AdminDash() {
         return navigate("/user-dashboard");
       }
       if (profile.language) setLang(profile.language);
+      
+      // Ma'lumotlarni hamda dollar kursini yuklaymiz
       fetchDashboardData();
+      fetchUsdRate();
     };
     checkAdminStatus();
-  }, [navigate, fetchDashboardData]);
+  }, [navigate, fetchDashboardData, fetchUsdRate]);
 
   // TIZIMDAN CHIQISH
   const handleLogout = () => {
@@ -193,10 +219,12 @@ export default function AdminDash() {
             <GeneratorTab codeQuantity={codeQuantity} setCodeQuantity={setCodeQuantity} loading={loading} allPromoCodes={allPromoCodes} lang={lang} />
           )}
 
-          {/* 📂 KATALOG TAB: Til sinxronizatsiyasi uchun lang propini uzatdik */}
+          {/* 📂 KATALOG TAB: usdRate va fetchUsdRate prop sifida uzatildi */}
           {activeTab === "katalog" && (
             <KatalogTab 
               lang={lang} 
+              usdRate={usdRate}
+              onRateUpdate={fetchUsdRate}
               selectedCategory={selectedCategory} 
               setSelectedCategory={setSelectedCategory} 
             />

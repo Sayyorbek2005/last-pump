@@ -122,16 +122,14 @@ const autoFallbackImage = (title) => {
   return imgImageOne;
 };
 
-// Rasm URL manzilini aniqlovchi yordamchi funksiya (Online URL yoki Local Asset)
 const getProductImageSrc = (imgUrl, title) => {
   if (!imgUrl) return autoFallbackImage(title);
   if (imgUrl.startsWith("http://") || imgUrl.startsWith("https://")) {
-    return imgUrl; // Supabase Storage yoki Internetdagi rasm
+    return imgUrl;
   }
   return imageMapping[imgUrl.trim()] || autoFallbackImage(title);
 };
 
-// Yordamchi funksiya: xarakteristikalardan tur nomini olish
 const getTypeValue = (product) => {
   const arr = product?.characteristics || product?.specs || [];
   const foundObj = arr.find(c => c?.key === "Turi" || c?.key === "Тип");
@@ -165,7 +163,8 @@ const t = {
     save: "Saqlash",
     formNameUz: "Mahsulot nomi (O'zbekcha)",
     formNameRu: "Mahsulot nomi (Ruscha)",
-    formPrice: "Narxi ($)",
+    formPrice: "Narxi",
+    formCurrency: "Kiritish valyutasi",
     formCat: "Kategoriya (type_id)",
     formImgSelect: "Statik rasm tanlash",
     formImgUpload: "Kompyuterdan yangi rasm yuklash",
@@ -175,7 +174,8 @@ const t = {
     formVkhVykh: "Вх/Вых (Kirish/Chiqish)",
     formKw: "кВт (Quvvat)",
     formLm: "л/м (Suv sarfi)",
-    formPodyem: "Подъём (Balandlik)"
+    formPodyem: "Подъём (Balandlik)",
+    usdRateLabel: "1 USD Kursi:"
   },
   ru: {
     panelTitle: "Панель управления админа",
@@ -202,7 +202,8 @@ const t = {
     save: "Сохранить",
     formNameUz: "Название товара (Узбекский)",
     formNameRu: "Название товара (Русский)",
-    formPrice: "Цена ($)",
+    formPrice: "Цена",
+    formCurrency: "Валюта ввода",
     formCat: "Категория (type_id)",
     formImgSelect: "Выбрать статическое изображение",
     formImgUpload: "Загрузить новое фото с компьютера",
@@ -212,14 +213,23 @@ const t = {
     formVkhVykh: "Вх/Вых",
     formKw: "кВт",
     formLm: "л/м",
-    formPodyem: "Подъём"
+    formPodyem: "Подъём",
+    usdRateLabel: "Курс 1 USD:"
   }
 };
 
-export default function AdminCatalog({ lang }) {
+export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentLang, setCurrentLang] = useState(lang || 'uz'); 
+
+  // === DOLLAR KURSI STATE-I ===
+  const [rate, setRate] = useState(propUsdRate || 12800);
+  const [inputRate, setInputRate] = useState(propUsdRate || 12800);
+  const [updatingRate, setUpdatingRate] = useState(false);
+
+  // 🎯 ADMIN QAYSI VALYUTADA KO'RISHNI TANLAYDI ('usd' YOKI 'uzs')
+  const [displayCurrency, setDisplayCurrency] = useState('usd');
 
   const [selectedType, setSelectedType] = useState(null); 
   const [viewingProductDetails, setViewingProductDetails] = useState(null); 
@@ -227,19 +237,84 @@ export default function AdminCatalog({ lang }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   
-  // Rasm yuklash holatlari
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
 
   const [formData, setFormData] = useState({
-    title_uz: '', title_ru: '', price: '', image_url: '', type_id: '', 
+    title_uz: '', title_ru: '', price: '', currency: 'usd', image_url: '', type_id: '', 
     turi_uz: '', turi_ru: '', vkh_vykh: '', kw: '', lm: '', podyem: ''
   });
 
   useEffect(() => {
     if (lang) setCurrentLang(lang);
   }, [lang]);
+
+  useEffect(() => {
+    if (propUsdRate) {
+      setRate(propUsdRate);
+      setInputRate(propUsdRate);
+    }
+  }, [propUsdRate]);
+
+  // === 1. BAZADAN DOLLAR KURSINI OLISH ===
+  const fetchRateSetting = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('shop_settings')
+        .select('usd_rate')
+        .eq('id', 1)
+        .single();
+
+      if (data && data.usd_rate) {
+        setRate(data.usd_rate);
+        setInputRate(data.usd_rate);
+      }
+    } catch (err) {
+      console.error("Kursni yuklashda xato:", err);
+    }
+  }, []);
+
+  // === 2. DOLLAR KURSINI O'ZGARTIRISH VA SAQLASH ===
+  const handleSaveRate = async (e) => {
+    e.preventDefault();
+    setUpdatingRate(true);
+
+    try {
+      const { error } = await supabase
+        .from('shop_settings')
+        .update({ usd_rate: Number(inputRate), updated_at: new Date() })
+        .eq('id', 1);
+
+      if (!error) {
+        setRate(Number(inputRate));
+        if (onRateUpdate) onRateUpdate();
+        alert(currentLang === 'uz' ? "Dollar kursi yangilandi!" : "Курс доллара обновлен!");
+      } else {
+        alert("Xatolik: " + error.message);
+      }
+    } catch (err) {
+      alert("Xatolik: " + err.message);
+    } finally {
+      setUpdatingRate(false);
+    }
+  };
+
+  // 🎯 BITTA NARX CHIQARISH FUNKSIYASI (TANLANGAN VALYUTAGA QARAB)
+  const formatPrice = useCallback((itemPrice, itemCurrency = 'usd') => {
+    if (itemPrice === undefined || itemPrice === null || itemPrice === '') return '0';
+    const numPrice = Number(itemPrice);
+
+    if (displayCurrency === 'uzs') {
+      // Agar mahsulot dollari kiritilgan bo'lsa so'mga o'giramiz, so'm bo'lsa o'zicha qoladi
+      const somVal = (itemCurrency === 'usd') ? numPrice * rate : numPrice;
+      return `${Math.round(somVal).toLocaleString('uz-UZ')} so'm`;
+    } else {
+      // Agar USD tanlangan bo'lsa
+      const usdVal = (itemCurrency === 'uzs' || itemCurrency === 'sum') ? (numPrice / rate) : numPrice;
+      return `$${usdVal % 1 === 0 ? usdVal : usdVal.toFixed(2)}`;
+    }
+  }, [displayCurrency, rate]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -260,9 +335,9 @@ export default function AdminCatalog({ lang }) {
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+    fetchRateSetting();
+  }, [fetchProducts, fetchRateSetting]);
 
-  // === TURLARNI TARTIBLASH: "Вихревой" (Vixrevoy) birinchi bo'lib chiqadi ===
   const allTypes = useMemo(() => {
     const types = products.map(getTypeValue).filter(Boolean);
     const uniqueTypes = [...new Set(types)];
@@ -309,6 +384,7 @@ export default function AdminCatalog({ lang }) {
       title_uz: product?.title_uz || '',
       title_ru: product?.title_ru || '',
       price: product?.price || '',
+      currency: product?.currency || 'usd',
       image_url: product?.image_url || '',
       type_id: product?.type_id || '',
       turi_uz: targetArray.find(c => c?.key === "Turi")?.value || '',
@@ -326,20 +402,18 @@ export default function AdminCatalog({ lang }) {
     setImageFile(null);
     setPreviewImage(null);
     setFormData({ 
-      title_uz: '', title_ru: '', price: '', image_url: '', type_id: '', 
+      title_uz: '', title_ru: '', price: '', currency: 'usd', image_url: '', type_id: '', 
       turi_uz: selectedType || '', turi_ru: selectedType || '',
       vkh_vykh: '', kw: '', lm: '', podyem: ''
     });
     setIsModalOpen(true);
   };
 
-  // Kompyuterdan yangi rasm tanlanganda runs
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
       setPreviewImage(URL.createObjectURL(file));
-      // Fayl tanlanganda dropdown tanlovini tozalaymiz
       setFormData(prev => ({ ...prev, image_url: '' }));
     }
   };
@@ -351,13 +425,11 @@ export default function AdminCatalog({ lang }) {
     try {
       setUploadingImage(true);
 
-      // Agar kompyuterdan yangi rasm fayli tanlangan bo'lsa, uni Supabase Storage-ga yuklaymiz
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         const filePath = `products/${fileName}`;
 
-        // 'product-images' bu sizning Supabase Storage Bucket nomingiz
         const { error: uploadError } = await supabase.storage
           .from('product-images')
           .upload(filePath, imageFile);
@@ -386,6 +458,7 @@ export default function AdminCatalog({ lang }) {
         title_uz: formData.title_uz,
         title_ru: formData.title_ru,
         price: parseFloat(formData.price) || 0,
+        currency: formData.currency,
         image_url: finalImageUrl || null,
         type_id: formData.type_id.toLowerCase().trim(),
         characteristics: jsonFormat,
@@ -434,9 +507,107 @@ export default function AdminCatalog({ lang }) {
             </div>
             <p className="banner-subtitle">{currentTranslation.subtitle}</p>
           </div>
-          <button onClick={openCreateModal} className="btn-main-add">
-            <span>+</span> {currentTranslation.addBtn}
-          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+            
+            {/* 🎯 VALYUTANI ALMASHTIRISH TOGGLE (NARSALAR QAYSI VALYUTADA KO'RINSIN) */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#e2e8f0',
+              padding: '3px',
+              borderRadius: '8px'
+            }}>
+              <button
+                type="button"
+                onClick={() => setDisplayCurrency('usd')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: displayCurrency === 'usd' ? '#2563eb' : 'transparent',
+                  color: displayCurrency === 'usd' ? '#ffffff' : '#475569',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                USD ($)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisplayCurrency('uzs')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: displayCurrency === 'uzs' ? '#16a34a' : 'transparent',
+                  color: displayCurrency === 'uzs' ? '#ffffff' : '#475569',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                SO'M
+              </button>
+            </div>
+
+            {/* DOLLAR KURSINI O'ZGARTIRISH FORMASI */}
+            <form onSubmit={handleSaveRate} style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#ffffff',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}>
+              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#334155' }}>
+                💵 1 USD =
+              </span>
+              <input 
+                type="number"
+                value={inputRate}
+                onChange={(e) => setInputRate(e.target.value)}
+                style={{
+                  width: '90px',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid #94a3b8',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  outline: 'none'
+                }}
+                required
+              />
+              <span style={{ fontSize: '12px', color: '#64748b' }}>so'm</span>
+              <button
+                type="submit"
+                disabled={updatingRate}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: '#16a34a',
+                  color: '#ffffff',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {updatingRate ? "..." : (currentLang === 'uz' ? "Saqlash" : "Сохранить")}
+              </button>
+            </form>
+
+            <button onClick={openCreateModal} className="btn-main-add">
+              <span>+</span> {currentTranslation.addBtn}
+            </button>
+
+          </div>
         </div>
 
         {/* BREADCRUMBS */}
@@ -521,7 +692,7 @@ export default function AdminCatalog({ lang }) {
                           </div>
                           
                           <div className="product-footer-action">
-                            <span className="product-price">${item?.price?.toLocaleString()}</span>
+                            <span className="product-price">{formatPrice(item?.price, item?.currency)}</span>
                             <div className="admin-crud-group">
                               <button onClick={(e) => openEditModal(e, item)} className="btn-crud edit">✏️</button>
                               <button onClick={(e) => handleDelete(e, item.id)} className="btn-crud delete">🗑️</button>
@@ -577,7 +748,7 @@ export default function AdminCatalog({ lang }) {
                 <div className="detail-row-grid">
                   <div className="detail-item-box">
                     <p className="detail-label">{currentTranslation.price}</p>
-                    <p className="detail-value price-color">${viewingProductDetails?.price?.toLocaleString()}</p>
+                    <p className="detail-value price-color">{formatPrice(viewingProductDetails?.price, viewingProductDetails?.currency)}</p>
                   </div>
                   <div className="detail-item-box">
                     <p className="detail-label">{currentTranslation.imgName}</p>
@@ -636,21 +807,58 @@ export default function AdminCatalog({ lang }) {
                     <input type="text" required value={formData.title_ru} onChange={(e) => setFormData({...formData, title_ru: e.target.value})} />
                   </div>
 
+                  {/* VALYUTA TOGGLE TUGMASI VA NARX */}
                   <div className="form-row-split">
                     <div className="admin-form-group">
                       <label>{currentTranslation.formPrice}</label>
-                      <input type="number" required value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
+                      <input type="number" step="any" required placeholder="Masalan: 63" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
                     </div>
                     <div className="admin-form-group">
-                      <label>{currentTranslation.formCat}</label>
-                      <input type="text" required className="uppercase-input" value={formData.type_id} onChange={(e) => setFormData({...formData, type_id: e.target.value})} />
+                      <label>{currentTranslation.formCurrency}</label>
+                      <div style={{ display: 'flex', gap: '5px', marginTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, currency: 'usd' })}
+                          style={{
+                            flex: 1,
+                            padding: '8px',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            backgroundColor: formData.currency === 'usd' ? '#2563eb' : '#f8fafc',
+                            color: formData.currency === 'usd' ? '#ffffff' : '#334155',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          USD ($)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, currency: 'uzs' })}
+                          style={{
+                            flex: 1,
+                            padding: '8px',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            backgroundColor: formData.currency === 'uzs' ? '#16a34a' : '#f8fafc',
+                            color: formData.currency === 'uzs' ? '#ffffff' : '#334155',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          SO'M
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* 📷 RASM TANLASH QISMI (IKKITA USUL: MAVJUD RASM YOKI YANGI FAYL YUKLASH) */}
+                  <div className="admin-form-group">
+                    <label>{currentTranslation.formCat}</label>
+                    <input type="text" required className="uppercase-input" value={formData.type_id} onChange={(e) => setFormData({...formData, type_id: e.target.value})} />
+                  </div>
+
+                  {/* 📷 RASM TANLASH QISMI */}
                   <div className="admin-form-group" style={{ background: '#f1f5f9', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                    
-                    {/* 1. Kompyuterdan yangi rasm faylini yuklash */}
                     <div style={{ marginBottom: '10px' }}>
                       <label style={{ fontWeight: 'bold', color: '#0f172a' }}>📁 {currentTranslation.formImgUpload}:</label>
                       <input 
@@ -663,17 +871,16 @@ export default function AdminCatalog({ lang }) {
 
                     <div style={{ textAlign: 'center', fontSize: '12px', color: '#64748b', margin: '5px 0' }}>— YOKI —</div>
 
-                    {/* 2. Statik tayyor rasmlardan tanlash */}
                     <div>
                       <label style={{ fontWeight: 'bold', color: '#0f172a' }}>🖼️ {currentTranslation.formImgSelect}:</label>
                       <select 
                         value={formData.image_url} 
                         onChange={(e) => {
-                          setFormData({...formData, image_url: e.target.value});
-                          setImageFile(null); // Statik rasm tanlanganda file yuklashni bekor qilish
+                          setFormData({ ...formData, image_url: e.target.value });
+                          setImageFile(null);
                           setPreviewImage(null);
                         }}
-                        style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', background: '#fff', marginTop: '5px' }}
+                        style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '5px' }}
                       >
                         <option value="">-- Statik rasm tanlang --</option>
                         {Object.keys(imageMapping).map((imgKey) => (
@@ -682,59 +889,59 @@ export default function AdminCatalog({ lang }) {
                       </select>
                     </div>
 
-                    {/* Prevyu ko'rsatish */}
                     {(previewImage || formData.image_url) && (
                       <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                        <p style={{ fontSize: '11px', color: '#475569', marginBottom: '4px' }}>Tanlangan rasm ko'rinishi:</p>
+                        <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>Oldindan ko'rish:</p>
                         <img 
                           src={previewImage || getProductImageSrc(formData.image_url, formData.title_uz)} 
-                          alt="Prevyu" 
-                          style={{ maxHeight: '80px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                          alt="Preview" 
+                          style={{ maxHeight: '80px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #e2e8f0' }}
                         />
                       </div>
                     )}
                   </div>
 
+                  {/* TEXNIK XUSUSIYATLAR */}
                   <div className="form-row-split">
                     <div className="admin-form-group">
                       <label>{currentTranslation.formTypeUz}</label>
-                      <input type="text" placeholder="Masalan: Girdobli" value={formData.turi_uz} onChange={(e) => setFormData({...formData, turi_uz: e.target.value})} />
+                      <input type="text" value={formData.turi_uz} onChange={(e) => setFormData({...formData, turi_uz: e.target.value})} />
                     </div>
                     <div className="admin-form-group">
                       <label>{currentTranslation.formTypeRu}</label>
-                      <input type="text" placeholder="Например: Вихревой" value={formData.turi_ru} onChange={(e) => setFormData({...formData, turi_ru: e.target.value})} />
+                      <input type="text" value={formData.turi_ru} onChange={(e) => setFormData({...formData, turi_ru: e.target.value})} />
                     </div>
                   </div>
 
                   <div className="form-row-split">
                     <div className="admin-form-group">
                       <label>{currentTranslation.formVkhVykh}</label>
-                      <input type="text" placeholder="25*25" value={formData.vkh_vykh} onChange={(e) => setFormData({...formData, vkh_vykh: e.target.value})} />
+                      <input type="text" placeholder='Masalan: 1"x1"' value={formData.vkh_vykh} onChange={(e) => setFormData({...formData, vkh_vykh: e.target.value})} />
                     </div>
                     <div className="admin-form-group">
                       <label>{currentTranslation.formKw}</label>
-                      <input type="text" placeholder="0.37" value={formData.kw} onChange={(e) => setFormData({...formData, kw: e.target.value})} />
+                      <input type="text" placeholder="Masalan: 0.37" value={formData.kw} onChange={(e) => setFormData({...formData, kw: e.target.value})} />
                     </div>
                   </div>
 
                   <div className="form-row-split">
                     <div className="admin-form-group">
                       <label>{currentTranslation.formLm}</label>
-                      <input type="text" placeholder="35" value={formData.lm} onChange={(e) => setFormData({...formData, lm: e.target.value})} />
+                      <input type="text" placeholder="Masalan: 35" value={formData.lm} onChange={(e) => setFormData({...formData, lm: e.target.value})} />
                     </div>
                     <div className="admin-form-group">
                       <label>{currentTranslation.formPodyem}</label>
-                      <input type="text" placeholder="32" value={formData.podyem} onChange={(e) => setFormData({...formData, podyem: e.target.value})} />
+                      <input type="text" placeholder="Masalan: 35" value={formData.podyem} onChange={(e) => setFormData({...formData, podyem: e.target.value})} />
                     </div>
                   </div>
                 </div>
 
                 <div className="modal-footer-actions">
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn-modal-action cancel" disabled={uploadingImage}>
-                    {currentTranslation.cancel}
-                  </button>
-                  <button type="submit" className="btn-modal-action submit" disabled={uploadingImage}>
+                  <button type="submit" disabled={uploadingImage} className="btn-modal-action save">
                     {uploadingImage ? currentTranslation.uploading : currentTranslation.save}
+                  </button>
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="btn-modal-action cancel">
+                    {currentTranslation.cancel}
                   </button>
                 </div>
               </form>

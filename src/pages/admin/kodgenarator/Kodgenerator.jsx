@@ -49,6 +49,7 @@ export default function CodeGenerator({ lang = "uz" }) {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedGroupCodes, setSelectedGroupCodes] = useState([]);
+  const [isDeletingUsed, setIsDeletingUsed] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const translations = {
@@ -142,6 +143,7 @@ export default function CodeGenerator({ lang = "uz" }) {
 
       const formattedUsedCodes = (rawUsedData || []).map(uc => ({
         id: uc.id,
+        code_id: uc.code_id,
         code: uc.promo_codes?.code || "NOMA'LUM KOD",
         status: "used"
       }));
@@ -297,6 +299,7 @@ export default function CodeGenerator({ lang = "uz" }) {
 
   const toggleGroupPause = async (batch) => {
     const nextStatus = batch.status === "paused" ? "active" : "paused";
+    const nextIsActive = nextStatus === "active";
 
     try {
       const chunkSize = 1000;
@@ -304,7 +307,10 @@ export default function CodeGenerator({ lang = "uz" }) {
         const chunkIds = batch.ids.slice(i, i + chunkSize);
         const { error } = await supabase
           .from("promo_codes")
-          .update({ status: nextStatus })
+          .update({ 
+            status: nextStatus,
+            is_active: nextIsActive 
+          })
           .in("id", chunkIds);
 
         if (error) throw error;
@@ -312,16 +318,22 @@ export default function CodeGenerator({ lang = "uz" }) {
 
       toast.success(t.toastStatusUpdated);
       await fetchBatches();
+
       if (expandedBatch === batch.batchId) {
-        setActiveBatchCodes(prev => prev.map(c => ({ ...c, status: nextStatus })));
+        setActiveBatchCodes(prev => prev.map(c => ({ 
+          ...c, 
+          status: nextStatus,
+          is_active: nextIsActive 
+        })));
       }
     } catch (err) {
       toast.error("Xatolik: " + err.message);
     }
   };
 
-  const openDeleteModal = (ids) => {
+  const openDeleteModal = (ids, isUsed = false) => {
     setSelectedGroupCodes(ids);
+    setIsDeletingUsed(isUsed);
     setShowDeleteModal(true);
   };
 
@@ -333,12 +345,14 @@ export default function CodeGenerator({ lang = "uz" }) {
       const chunkSize = 1000;
       for (let i = 0; i < selectedGroupCodes.length; i += chunkSize) {
         const chunk = selectedGroupCodes.slice(i, i + chunkSize);
-        const isFromUsedTable = usedCodes.some(uc => uc.id === chunk[0]);
         
+        const tableName = isDeletingUsed ? "used_codes" : "promo_codes";
+        const columnName = isDeletingUsed ? "id" : "id";
+
         const { error } = await supabase
-          .from(isFromUsedTable ? "used_codes" : "promo_codes")
+          .from(tableName)
           .delete()
-          .in("id", chunk);
+          .in(columnName, chunk);
 
         if (error) throw error;
       }
@@ -353,6 +367,7 @@ export default function CodeGenerator({ lang = "uz" }) {
       setDeleteLoading(false);
       setShowDeleteModal(false);
       setSelectedGroupCodes([]);
+      setIsDeletingUsed(false);
     }
   };
 
@@ -452,7 +467,7 @@ export default function CodeGenerator({ lang = "uz" }) {
                     {isGroupPaused ? <FaPlay size={11} /> : <FaPause size={11} />}
                   </button>
 
-                  <button onClick={() => openDeleteModal(batch.ids)} className="btn-action-delete">
+                  <button onClick={() => openDeleteModal(batch.ids, false)} className="btn-action-delete">
                     <FaTrashAlt size={12} />
                   </button>
                   <button onClick={() => copyGroupToClipboard(batch.ids)} className="btn-action-copy">
@@ -530,7 +545,7 @@ export default function CodeGenerator({ lang = "uz" }) {
               <p>{t.usedSubtitle}</p>
             </div>
             {usedCodes.length > 0 && (
-              <button onClick={() => openDeleteModal(usedCodes.map(c => c.id))} className="btn-action-delete">
+              <button onClick={() => openDeleteModal(usedCodes.map(c => c.id), true)} className="btn-action-delete">
                 <FaTrashAlt size={12} />
               </button>
             )}

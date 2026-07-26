@@ -17,7 +17,7 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
   const [bonusCode, setBonusCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [historyData, setHistoryData] = useState([]);
-  const [showHistory, setShowHistory] = useState(false); // Tarixni ko'rsatish/yashirish holati
+  const [showHistory, setShowHistory] = useState(false);
 
   const translations = {
     uz: {
@@ -38,6 +38,9 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
       alertSuccess: "Kod muvaffaqiyatli tekshirishga yuborildi!",
       alertWarning: "Iltimos, faollashtirish uchun kodni kiriting!",
       alertError: "Xatolik yuz berdi: ",
+      alertErrPaused: "Ushbu promo-kod vaqtincha to'xtatilgan (pauzada)! ⏸️",
+      alertErrNotFound: "Kiritilgan kod xato yoki bazada mavjud emas! ❌",
+      alertErrAlreadyUsed: "Siz bu kodni allaqachon tekshirishga yuborgansiz! ❌",
       viewHistoryBtn: "Barcha kiritilgan kodlarni ko'rish"
     },
     ru: {
@@ -58,6 +61,9 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
       alertSuccess: "Код успешно отправлен на проверку!",
       alertWarning: "Пожалуйста, введите код для активации!",
       alertError: "Произошла ошибка: ",
+      alertErrPaused: "Этот промокод временно приостановлен! ⏸️",
+      alertErrNotFound: "Введенный код неверен или не существует! ❌",
+      alertErrAlreadyUsed: "Вы уже отправляли этот код на проверку! ❌",
       viewHistoryBtn: "Посмотреть все введенные коды"
     }
   };
@@ -86,7 +92,6 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
   }, [userId]);
 
   const fetchHistory = useCallback(async () => {
-    // Agar showHistory true bo'lsa, ma'lumotlarni yuklaymiz
     if (!showHistory) return; 
 
     try {
@@ -97,7 +102,7 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
         .from("used_codes")
         .select("*, promo_codes(code)") 
         .eq("user_id", activeId)
-        .order("created_at", { ascending: false }); // Limit yo'q, hammasini olib keladi
+        .order("created_at", { ascending: false });
 
       if (!error && data) setHistoryData(data);
     } catch (err) {
@@ -105,7 +110,6 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
     }
   }, [getActiveUserId, showHistory]);
 
-  // Faqat showHistory o'zgarganda yoki funksiya yangilanganda ishlaydi
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
@@ -120,21 +124,34 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
     try {
       const activeId = await getActiveUserId();
       if (!activeId) {
-        throw new Error("Tizimga kirgan foydalanuvchi aniqlanmadi. Profilga qayta kiring!");
+        alert("Tizimga kirgan foydalanuvchi aniqlanmadi. Profilga qayta kiring!");
+        setLoading(false);
+        return;
       }
 
       const cleanCode = bonusCode.trim().toUpperCase();
 
+      // 🔍 1. Promo-kodni bazadan qidiramiz (points ni ham olamiz)
       const { data: promoData, error: promoError } = await supabase
         .from("promo_codes")
-        .select("id")
+        .select("id, status, is_active, points")
         .eq("code", cleanCode)
-        .single();
+        .maybeSingle();
 
       if (promoError || !promoData) {
-        throw new Error("Kiritilgan kod xato yoki bazada mavjud emas!");
+        alert(t.alertErrNotFound);
+        setLoading(false);
+        return;
       }
 
+      // ⏸️ 2. AGAR KOD PAUZADA BO'LSA
+      if (promoData.status === "paused" || promoData.is_active === false) {
+        alert(t.alertErrPaused);
+        setLoading(false);
+        return;
+      }
+
+      // 🔍 3. Kod allaqachon ishlatilganligini tekshiramiz
       const { data: alreadyUsed, error: checkError } = await supabase
         .from("used_codes")
         .select("id")
@@ -142,11 +159,18 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
         .eq("code_id", promoData.id)
         .maybeSingle();
 
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error("Tekshirishda xato:", checkError);
+      }
 
       if (alreadyUsed) {
-        throw new Error("Siz bu kodni allaqachon tekshirishga yuborgansiz! ❌");
+        alert(t.alertErrAlreadyUsed);
+        setLoading(false);
+        return;
       }
+
+      // 📝 4. used_codes jadvaliga points ni ham yozib yuboramiz
+      const codePoints = Number(promoData.points) || 2;
 
       const { error: dbError } = await supabase
         .from("used_codes")
@@ -156,15 +180,19 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
             code_id: promoData.id, 
             image_url: null,
             status: "pending",
+            points: codePoints,
             created_at: new Date().toISOString()
           }
         ]);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        alert("Bazaga yozishda xatolik: " + dbError.message);
+        setLoading(false);
+        return;
+      }
 
       setBonusCode("");
       
-      // Agar tarix paneli ochiq bo'lsa, yangilaydi
       if (showHistory) {
         fetchHistory();
       }
@@ -172,12 +200,12 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
       alert(t.alertSuccess);
 
     } catch (error) {
-      console.error(error);
-      alert(error.message); 
+      console.error("Kutilmagan xatolik:", error);
+      alert(t.alertError + error.message); 
     } finally {
       setLoading(false);
     }
-  }, [bonusCode, getActiveUserId, fetchHistory, showHistory, t.alertSuccess, t.alertWarning]);
+  }, [bonusCode, getActiveUserId, fetchHistory, showHistory, t]);
 
   const renderStatusBadge = (status) => {
     if (status === "approved" || status === "confirmed") {
@@ -239,7 +267,6 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
 
         <div className="code-history-panel">
           {!showHistory ? (
-            /* Boshida faqat shu tugma turadi */
             <div style={{ textAlign: "center", padding: "40px 20px" }}>
               <button 
                 className="view-history-trigger-btn"
@@ -262,7 +289,6 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
               </button>
             </div>
           ) : (
-            /* Tugma bosilgandan keyin jadval ochiladi */
             <>
               <h4 className="history-block-title">{t.historyTitle}</h4>
               <div className="table-wrapper">
@@ -295,7 +321,7 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
                         <td colSpan="3" className="empty-table-text">{t.noData}</td>
                       </tr>
                     )}
-                  </tbody>
+                  </tbody>  
                 </table>
               </div>
             </>

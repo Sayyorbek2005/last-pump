@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../../../supabase/client'; 
 import './katalog.css'; 
 
@@ -111,7 +111,8 @@ const translations = {
     noSpecs: "Xususiyatlar kiritilmagan",
     noProducts: "Mos keladigan mahsulotlar topilmadi.",
     close: "Yopish",
-    goHome: "Asosiy sahifaga qaytish"
+    goHome: "Asosiy sahifaga qaytish",
+    back: "← Orqaga"
   },
   ru: {
     title: "Каталог Насосов",
@@ -133,16 +134,20 @@ const translations = {
     noSpecs: "Характеристики не указаны",
     noProducts: "Совпадающие товары не найдены.",
     close: "Закрыть",
-    goHome: "Вернуться на главную"
+    goHome: "Вернуться на главную",
+    back: "← Назад"
   }
 };
 
 export default function UserCatalog() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
   const [lang, setLang] = useState(localStorage.getItem('lang') || 'uz');
   
+  // === DOLLAR KURSI VA VALYUTA STATE-LARI ===
+  const [rate, setRate] = useState(12800);
+  const [displayCurrency, setDisplayCurrency] = useState('usd'); // 'usd' yoki 'uzs'
+
   // Navigatsiya holatlari
   const [selectedType, setSelectedType] = useState(null); 
   const [selectedCategory, setSelectedCategory] = useState(null); 
@@ -152,13 +157,44 @@ export default function UserCatalog() {
   const getProductImageUrl = (url) => {
     if (!url) return null;
     const trimmed = url.trim();
-    // 1. Agar admin Supabase Storage'ga yuklagan bo'lsa (URL http/https bilan boshlanadi)
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       return trimmed;
     }
-    // 2. Aks holda statik xaritadan izlaydi
     return imageMapping[trimmed] || null;
   };
+
+  // === 1. BAZADAN DOLLAR KURSINI OLISH ===
+  const fetchRateSetting = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('shop_settings')
+        .select('usd_rate')
+        .eq('id', 1)
+        .single();
+
+      if (data && data.usd_rate) {
+        setRate(data.usd_rate);
+      }
+    } catch (err) {
+      console.error("Kursni yuklashda xato:", err);
+    }
+  }, []);
+
+  // === 2. NARXNI FORMATLASH FUNKSIYASI ===
+  const formatPrice = useCallback((itemPrice, itemCurrency = 'usd') => {
+    if (itemPrice === undefined || itemPrice === null || itemPrice === '' || itemPrice === 0) {
+      return translations[lang]?.agreedPrice || 'Kelishilgan narx';
+    }
+    const numPrice = Number(itemPrice);
+
+    if (displayCurrency === 'uzs') {
+      const somVal = (itemCurrency === 'usd') ? numPrice * rate : numPrice;
+      return `${Math.round(somVal).toLocaleString('uz-UZ')} so'm`;
+    } else {
+      const usdVal = (itemCurrency === 'uzs' || itemCurrency === 'sum') ? (numPrice / rate) : numPrice;
+      return `$${usdVal % 1 === 0 ? usdVal : usdVal.toFixed(2)}`;
+    }
+  }, [displayCurrency, rate, lang]);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -183,16 +219,21 @@ export default function UserCatalog() {
           .select('*')
           .order('id', { ascending: false });
 
-        if (error) console.error('Xatolik:', error.message);
-        else setProducts(data || []);
+        if (error) {
+          console.error('Xatolik:', error.message);
+        } else {
+          setProducts(data || []);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Kutilmagan xatolik:', err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchProducts();
-  }, []);
+    fetchRateSetting();
+  }, [fetchRateSetting]);
 
   const getProductTypeValue = (p) => {
     const arr = p.characteristics || p.specs || [];
@@ -235,11 +276,56 @@ export default function UserCatalog() {
     <div className="user-katalog-wrapper">
       <div className="user-katalog-max">
         
-        <div className="user-katalog-navigation-bar">
+        {/* TOP NAVIGATSIYA VA VALYUTA TOGGLE */}
+        <div className="user-katalog-navigation-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button onClick={handleGoHome} className="user-go-home-btn">
             <span className="btn-icon">←</span>
             <span>{t.goHome}</span>
           </button>
+
+          {/* VALYUTA TUGMALARI */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: '#e2e8f0',
+            padding: '3px',
+            borderRadius: '8px'
+          }}>
+            <button
+              type="button"
+              onClick={() => setDisplayCurrency('usd')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: displayCurrency === 'usd' ? '#2563eb' : 'transparent',
+                color: displayCurrency === 'usd' ? '#ffffff' : '#475569',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '13px',
+                transition: 'all 0.2s'
+              }}
+            >
+              USD ($)
+            </button>
+            <button
+              type="button"
+              onClick={() => setDisplayCurrency('uzs')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: displayCurrency === 'uzs' ? '#16a34a' : 'transparent',
+                color: displayCurrency === 'uzs' ? '#ffffff' : '#475569',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '13px',
+                transition: 'all 0.2s'
+              }}
+            >
+              SO'M
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -274,12 +360,12 @@ export default function UserCatalog() {
               </div>
             )}
 
-            {/* 2-BOSQICH: TANLANGAN TUR ICHIDAGI KATEGORIYALAR */}
+            {/* 2-BOSQICH: KATEGORIYALAR */}
             {selectedType && !selectedCategory && (
               <div>
                 <div className="user-inner-header">
                   <button onClick={() => setSelectedType(null)} className="user-back-btn">
-                    ← Orqaga
+                    {t.back}
                   </button>
                   <div className="user-section-title" style={{ margin: 0 }}>
                     <h2>{t.selectCategory}</h2>
@@ -309,10 +395,10 @@ export default function UserCatalog() {
               <div>
                 <div className="user-inner-header">
                   <button 
-                    onClick={() => { setSelectedCategory(null); }} 
+                    onClick={() => setSelectedCategory(null)} 
                     className="user-back-btn"
                   >
-                    ← Orqaga
+                    {t.back}
                   </button>
                   <div className="user-section-title" style={{ margin: 0 }}>
                     <h2>{`${selectedType} (${selectedCategory?.toUpperCase()})`}</h2>
@@ -335,7 +421,7 @@ export default function UserCatalog() {
                             {imgSource ? (
                               <img 
                                 src={imgSource} 
-                                alt={item.title_uz} 
+                                alt={item.title_uz || "Mahsulot rasmi"} 
                                 className="product-main-img" 
                               />
                             ) : (
@@ -350,12 +436,15 @@ export default function UserCatalog() {
                             </div>
                             
                             <p className="prod-desc-text">
-                              {lang === 'uz' ? (item.description_uz || item.description || t.noDescription) : (item.description_ru || item.description_uz || item.description || t.noDescription)}
+                              {lang === 'uz' 
+                                ? (item.description_uz || item.description || t.noDescription) 
+                                : (item.description_ru || item.description_uz || item.description || t.noDescription)}
                             </p>
                             
                             <div className="prod-footer-row">
+                              {/* YANGILANGAN DYNAMIC NARX */}
                               <p className="prod-price-text">
-                                {item.price ? `$${item.price.toLocaleString()}` : t.agreedPrice}
+                                {formatPrice(item.price, item.currency)}
                               </p>
                               <span className="user-action-view-btn">{t.viewMore}</span>
                             </div>
@@ -374,7 +463,7 @@ export default function UserCatalog() {
           </>
         )}
 
-        {/* 🔍 DETAL MODAL */}
+        {/* 🔍 BATAFSIL MA'LUMOT MODAL TAZIMASI */}
         {viewingProductDetails && (
           <div className="user-modal-overlay" onClick={() => setViewingProductDetails(null)}>
             <div className="user-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -411,15 +500,18 @@ export default function UserCatalog() {
                   </div>
                   <div className="detail-box">
                     <span className="detail-label">{t.price}</span>
+                    {/* MODAL ICHIDAGI YANGILANGAN NARX */}
                     <p className="detail-val price-highlight">
-                      {viewingProductDetails.price ? `$${viewingProductDetails.price.toLocaleString()}` : t.agreedPrice}
+                      {formatPrice(viewingProductDetails.price, viewingProductDetails.currency)}
                     </p>
                   </div>
                   
                   <div className="detail-box" style={{ gridColumn: '1 / -1' }}>
                     <span className="detail-label">{t.description}</span>
                     <p className="detail-val" style={{ whiteSpace: 'pre-line', fontWeight: 'normal', color: '#444' }}>
-                      {lang === 'uz' ? (viewingProductDetails.description_uz || viewingProductDetails.description || t.noDescription) : (viewingProductDetails.description_ru || viewingProductDetails.description_uz || viewingProductDetails.description || t.noDescription)}
+                      {lang === 'uz' 
+                        ? (viewingProductDetails.description_uz || viewingProductDetails.description || t.noDescription) 
+                        : (viewingProductDetails.description_ru || viewingProductDetails.description_uz || viewingProductDetails.description || t.noDescription)}
                     </p>
                   </div>
                 </div>
