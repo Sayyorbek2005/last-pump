@@ -45,7 +45,6 @@ import imgWFD from "./assets2/WFD.png";
 import imgWQD from "./assets2/WQD.png";
 import imgWSD from "./assets2/WSD.png";
 
-// === RASMLAR XARITASI ===
 const imageMapping = {
   "2STM-1.png": img2STM1,
   "2STM-2.png": img2STM2,
@@ -95,17 +94,14 @@ const translations = {
     title: "Nasoslar Katalogi",
     mainCatalog: "Asosiy Katalog",
     loading: "Yuklanmoqda...",
-    selectType: "1. Nasos turini tanlang",
-    selectCategory: "2. Mahsulot turkumini tanlang",
+    selectType: "1. Katalog turini tanlang",
     productsCount: "ta model",
-    viewModels: "Turkumlarni ko'rish",
     agreedPrice: "Kelishilgan narx",
     viewMore: "Batafsil →",
     productId: "Mahsulot ID",
-    category: "Turkum",
-    pumpType: "Nasos turi",
+    pumpType: "Katalog turi",
     price: "Narxi",
-    description: "Tavsif (Description)",
+    description: "Tavsif",
     noDescription: "Tavsif kiritilmagan",
     specs: "Texnik xususiyatlari",
     noSpecs: "Xususiyatlar kiritilmagan",
@@ -118,15 +114,12 @@ const translations = {
     title: "Каталог Насосов",
     mainCatalog: "Главный Каталог",
     loading: "Загрузка...",
-    selectType: "1. Выберите тип насоса",
-    selectCategory: "2. Выберите категорию товара",
+    selectType: "1. Выберите категорию",
     productsCount: "моделей",
-    viewModels: "Посмотреть категории",
     agreedPrice: "Договорная цена",
     viewMore: "Подробнее →",
     productId: "ID Продукта",
-    category: "Категория",
-    pumpType: "Тип насоса",
+    pumpType: "Тип категории",
     price: "Цена",
     description: "Описание",
     noDescription: "Описание отсутствует",
@@ -141,10 +134,10 @@ const translations = {
 
 export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: parentRate, onBack, lang: parentLang }) {
   const [products, setProducts] = useState([]);
+  const [categoryOrder, setCategoryOrder] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState(parentLang || localStorage.getItem('lang') || 'uz');
   
-  // === DOLLAR KURSI VA VALYUTA STATE-LARI ===
   const [rate, setRate] = useState(parentRate || 12800);
   const [displayCurrency, setDisplayCurrency] = useState(parentCurrency || localStorage.getItem('app_currency') || 'usd'); 
 
@@ -160,12 +153,9 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
     if (parentLang) setLang(parentLang);
   }, [parentLang]);
 
-  // Navigatsiya holatlari
   const [selectedType, setSelectedType] = useState(null); 
-  const [selectedCategory, setSelectedCategory] = useState(null); 
   const [viewingProductDetails, setViewingProductDetails] = useState(null); 
 
-  // === RASM URLLARINI ANIQLASH MANTIQI ===
   const getProductImageUrl = (url) => {
     if (!url) return null;
     const trimmed = url.trim();
@@ -175,7 +165,6 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
     return imageMapping[trimmed] || null;
   };
 
-  // === 1. BAZADAN DOLLAR KURSINI OLISH ===
   const fetchRateSetting = useCallback(async () => {
     if (parentRate) return;
     try {
@@ -193,7 +182,6 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
     }
   }, [parentRate]);
 
-  // === 2. NARXNI FORMATLASH FUNKSIYASI ===
   const formatPrice = useCallback((itemPrice, itemCurrency = 'usd') => {
     if (itemPrice === undefined || itemPrice === null || itemPrice === '' || itemPrice === 0) {
       return translations[lang]?.agreedPrice || 'Kelishilgan narx';
@@ -210,35 +198,34 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
   }, [displayCurrency, rate, lang]);
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      setLang(localStorage.getItem('lang') || localStorage.getItem('app_lang') || 'uz');
-      const localCurr = localStorage.getItem('app_currency');
-      if (localCurr && !parentCurrency) {
-        setDisplayCurrency(localCurr);
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [parentCurrency]);
-
-  const t = translations[lang] || translations['uz'];
-
-  useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        
+        // 1. Mahsulotlarni sort_order bo'yicha olish
+        const { data: prodData, error: prodError } = await supabase
           .from('products')
           .select('*')
-          .order('id', { ascending: false });
+          .order('sort_order', { ascending: true, nullsFirst: false });
 
-        if (error) {
-          console.error('Xatolik:', error.message);
+        if (prodError) {
+          const { data: fallbackData } = await supabase.from('products').select('*').order('id', { ascending: false });
+          setProducts(fallbackData || []);
         } else {
-          setProducts(data || []);
+          setProducts(prodData || []);
         }
+
+        // 2. Kataloglar tartibini settings jadvalidan olish
+        const { data: settingsData } = await supabase
+          .from('settings')
+          .select('*')
+          .eq('key', 'category_order')
+          .single();
+
+        if (settingsData && settingsData.value) {
+          setCategoryOrder(settingsData.value);
+        }
+
       } catch (err) {
         console.error('Kutilmagan xatolik:', err);
       } finally {
@@ -246,58 +233,46 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
       }
     };
 
-    fetchProducts();
+    fetchData();
     fetchRateSetting();
   }, [fetchRateSetting]);
 
-  const getProductTypeValue = (p) => {
+  const getProductTypeValue = useCallback((p) => {
     const arr = p.characteristics || p.specs || [];
-    return arr.find(c => c.key === "Turi" || c.key === "Тип")?.value;
-  };
-
-  const allPumpTypes = useMemo(() => {
-    const types = products.map(p => getProductTypeValue(p)).filter(Boolean);
-    const uniqueTypes = [...new Set(types)];
-
-    return uniqueTypes.sort((a, b) => {
-      const isTargetA = a.toLowerCase().includes("vixrevoy") || a.toLowerCase().includes("вихревой");
-      const isTargetB = b.toLowerCase().includes("vixrevoy") || b.toLowerCase().includes("вихревой");
-
-      if (isTargetA) return -1;
-      if (isTargetB) return 1;
-      
-      return a.localeCompare(b);
-    });
-  }, [products]);
-
-  const getCategoriesOfType = () => {
-    const filtered = products.filter(p => getProductTypeValue(p) === selectedType);
-    return [...new Set(filtered.map(p => p.type_id).filter(Boolean))];
-  };
-
-  const filteredProducts = products.filter(p => {
-    const turiValue = getProductTypeValue(p);
-    const matchesType = turiValue === selectedType;
-    const matchesCategory = p.type_id === selectedCategory;
-    
-    return matchesType && matchesCategory;
-  });
-
-  const handleGoHome = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      window.location.href = "/";
+    if (Array.isArray(arr) && arr.length > 0) {
+      const searchKey = lang === 'ru' ? "Тип" : "Turi";
+      const found = arr.find(c => c?.key === searchKey || c?.key === "Turi" || c?.key === "Тип");
+      if (found?.value) return found.value.trim();
     }
-  };
+    return p.type || p.category || "Boshqa";
+  }, [lang]);
+
+  // Kataloglarni admin panelda saqlangan tartib bo'yicha chiqazish
+  const allPumpTypes = useMemo(() => {
+    const typesFromProducts = products.map(p => getProductTypeValue(p)).filter(Boolean);
+    const combined = [...new Set(typesFromProducts)];
+
+    if (categoryOrder.length > 0) {
+      const stillExisting = categoryOrder.filter(t => combined.includes(t));
+      const missing = combined.filter(t => !stillExisting.includes(t));
+      return [...stillExisting, ...missing];
+    }
+    return combined;
+  }, [products, categoryOrder, getProductTypeValue]);
+
+  const filteredProducts = useMemo(() => {
+    if (!selectedType) return [];
+    return products.filter(p => getProductTypeValue(p) === selectedType);
+  }, [products, selectedType, getProductTypeValue]);
+
+  const t = translations[lang] || translations['uz'];
 
   return (
     <div className="user-katalog-wrapper">
       <div className="user-katalog-max">
         
-        {/* TOP NAVIGATSIYA */}
         <div className="user-katalog-navigation-bar">
-          <button onClick={handleGoHome} className="user-go-home-btn">
+          <button onClick={onBack || (() => window.location.href = "/")} className="user-go-home-btn">
             <span className="btn-icon">←</span>
             <span>{t.goHome}</span>
           </button>
@@ -310,7 +285,6 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
           </div>
         ) : (
           <>
-            {/* 1-BOSQICH: NASOS TURLARI */}
             {!selectedType && (
               <div>
                 <div className="user-section-title">
@@ -318,65 +292,34 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
                 </div>
                 
                 <div className="user-types-grid">
-                  {allPumpTypes.map(turi => (
-                    <div 
-                      key={turi}
-                      onClick={() => setSelectedType(turi)}
-                      className="user-type-card"
-                    >
-                      <div className="type-info">
-                        <span className="user-type-name">{turi}</span>
-                        <p className="user-type-sub">{t.viewModels}</p>
+                  {allPumpTypes.map(turi => {
+                    const count = products.filter(p => getProductTypeValue(p) === turi).length;
+                    return (
+                      <div 
+                        key={turi}
+                        onClick={() => setSelectedType(turi)}
+                        className="user-type-card"
+                      >
+                        <div className="type-info">
+                          <span className="user-type-name">📁 {turi}</span>
+                          <p className="user-type-sub">{count} {t.productsCount}</p>
+                        </div>
+                        <span className="user-type-arrow">→</span>
                       </div>
-                      <span className="user-type-arrow">→</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* 2-BOSQICH: KATEGORIYALAR */}
-            {selectedType && !selectedCategory && (
+            {selectedType && (
               <div>
                 <div className="user-inner-header">
                   <button onClick={() => setSelectedType(null)} className="user-back-btn">
                     {t.back}
                   </button>
                   <div className="user-section-title" style={{ margin: 0 }}>
-                    <h2>{t.selectCategory}</h2>
-                  </div>
-                </div>
-
-                <div className="user-categories-grid">
-                  {getCategoriesOfType().map(cat => (
-                    <div 
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      className="user-category-card"
-                    >
-                      <div className="user-avatar-box">{cat.substring(0, 2).toUpperCase()}</div>
-                      <span className="user-cat-title">{cat.toUpperCase()}</span>
-                      <p className="user-cat-desc">
-                        {products.filter(p => getProductTypeValue(p) === selectedType && p.type_id === cat).length} {t.productsCount}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 3-BOSQICH: MODELLAR RO'YXATI */}
-            {selectedType && selectedCategory && (
-              <div>
-                <div className="user-inner-header">
-                  <button 
-                    onClick={() => setSelectedCategory(null)} 
-                    className="user-back-btn"
-                  >
-                    {t.back}
-                  </button>
-                  <div className="user-section-title" style={{ margin: 0 }}>
-                    <h2>{`${selectedType} (${selectedCategory?.toUpperCase()})`}</h2>
+                    <h2>📁 {selectedType}</h2>
                   </div>
                 </div>
 
@@ -392,7 +335,7 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
                           style={{ cursor: 'pointer' }}
                         >
                           <div className="prod-img-box">
-                            <span className="prod-tag">{item.type_id?.toUpperCase()}</span>
+                            <span className="prod-tag">{selectedType}</span>
                             {imgSource ? (
                               <img 
                                 src={imgSource} 
@@ -406,14 +349,12 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
                           
                           <div className="prod-details-box">
                             <div className="title-row">
-                              <h3>{lang === 'uz' ? item.title_uz : (item.title_ru || item.title_uz)}</h3>
+                              <h3>{lang === 'uz' ? (item.title_uz || item.title_ru) : (item.title_ru || item.title_uz)}</h3>
                               <span className="prod-id-tag">ID: {item.id}</span>
                             </div>
                             
                             <p className="prod-desc-text">
-                              {lang === 'uz' 
-                                ? (item.description_uz || item.description || t.noDescription) 
-                                : (item.description_ru || item.description_uz || item.description || t.noDescription)}
+                              {item.description_uz || item.description_ru || item.description || t.noDescription}
                             </p>
                             
                             <div className="prod-footer-row">
@@ -437,12 +378,11 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
           </>
         )}
 
-        {/* 🔍 BATAFSIL MA'LUMOT MODAL TAZIMASI */}
         {viewingProductDetails && (
           <div className="user-modal-overlay" onClick={() => setViewingProductDetails(null)}>
             <div className="user-modal-card" onClick={(e) => e.stopPropagation()}>
               <div className="user-modal-header">
-                <h3>{lang === 'uz' ? viewingProductDetails.title_uz : (viewingProductDetails.title_ru || viewingProductDetails.title_uz)}</h3>
+                <h3>{lang === 'uz' ? (viewingProductDetails.title_uz || viewingProductDetails.title_ru) : (viewingProductDetails.title_ru || viewingProductDetails.title_uz)}</h3>
                 <button className="user-modal-close" onClick={() => setViewingProductDetails(null)}>×</button>
               </div>
               
@@ -465,10 +405,6 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
                     <p className="detail-val text-mono">{viewingProductDetails.id}</p>
                   </div>
                   <div className="detail-box">
-                    <span className="detail-label">{t.category}</span>
-                    <p className="detail-val font-blue">{viewingProductDetails.type_id?.toUpperCase()}</p>
-                  </div>
-                  <div className="detail-box">
                     <span className="detail-label">{t.pumpType}</span>
                     <p className="detail-val font-green">{getProductTypeValue(viewingProductDetails)}</p>
                   </div>
@@ -476,15 +412,6 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
                     <span className="detail-label">{t.price}</span>
                     <p className="detail-val price-highlight">
                       {formatPrice(viewingProductDetails.price, viewingProductDetails.currency)}
-                    </p>
-                  </div>
-                  
-                  <div className="detail-box" style={{ gridColumn: '1 / -1' }}>
-                    <span className="detail-label">{t.description}</span>
-                    <p className="detail-val" style={{ whiteSpace: 'pre-line', fontWeight: 'normal', color: '#444' }}>
-                      {lang === 'uz' 
-                        ? (viewingProductDetails.description_uz || viewingProductDetails.description || t.noDescription) 
-                        : (viewingProductDetails.description_ru || viewingProductDetails.description_uz || viewingProductDetails.description || t.noDescription)}
                     </p>
                   </div>
                 </div>

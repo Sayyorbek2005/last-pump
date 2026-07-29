@@ -142,10 +142,13 @@ export default function UserMagazin({
   const fetchData = useCallback(async () => {
     if (!currentUser?.id) return;
     try {
+      // 🌟 ADMIN PANEL BILAN BIR HIL TARTIBDA O'QISH
       const { data: pData, error: pErr } = await supabase
         .from("prizes")
         .select("*")
-        .order("price", { ascending: true });
+        .order("position", { ascending: true, nullsFirst: true })
+        .order("created_at", { ascending: false });
+        
       if (pErr) throw pErr;
       setPrizes(pData || []);
 

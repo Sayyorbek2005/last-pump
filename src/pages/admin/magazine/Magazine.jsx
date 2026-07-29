@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../../supabase/client";
 import { toast } from "react-toastify";
-import { FaPlus, FaCheck, FaTimes, FaTrash, FaImage, FaUpload, FaSnowflake, FaFire } from "react-icons/fa";
+import { FaPlus, FaCheck, FaTimes, FaTrash, FaImage, FaUpload, FaSnowflake, FaFire, FaArrowUp, FaArrowDown } from "react-icons/fa";
 import "../magazine/magazine.css"; 
 
 export default function MagazinTab({ lang = "uz" }) {
@@ -15,7 +15,7 @@ export default function MagazinTab({ lang = "uz" }) {
   const [uploading, setUploading] = useState(false);
   const [globalLoading, setGlobalLoading] = useState(false);
 
-  // 🌍 Ko'p tilli matnlar lug'ati (Barcha qismlar dollar tizimiga o'tkazildi)
+  // 🌍 Ko'p tilli matnlar lug'ati
   const translations = {
     uz: {
       title: "🎁 Sovg'alar Do'koni (Admin Panel)",
@@ -29,7 +29,7 @@ export default function MagazinTab({ lang = "uz" }) {
       quantity: "Soni (Zaxira)",
       uploadingImg: "Rasm yuklanmoqda...",
       chooseImg: "Rasm tanlash",
-      imgReady: "Rasm tayyor!",
+      imgReady: "Rasm muvaffaqiyatli yuklandi!",
       publish: "E'lon qilish",
       availablePrizes: "📦 Do'konda mavjud sovg'alar",
       noPrizes: "Do'konda hozircha hech qanday sovg'a yo'q.",
@@ -61,7 +61,7 @@ export default function MagazinTab({ lang = "uz" }) {
       toastDeleted: "Sovg'a o'chirib tashlandi.",
       toastStatusChanged: "Buyurtma holati o'zgardi: ",
       confirmFreezeAll: "Haqiqatdan ham do'kondagi BARCHA mahsulotlarni birdaniga muzlatmoqchimisiz?",
-      confirmActivateAll: "Haqiqatdan ham barcha mahsulotlarni qaytadan sotuvga chiqarmoqchimisiz? (Har biriga 10 tadan joylanadi)",
+      confirmActivateAll: "Haqiqatdan ham barcha mahsulotlarni qaytadan sotuvga chiqarmoqchimisiz?",
       confirmDelete: "Haqiqatdan ham bu sovg'ani do'kondan o'chirmoqchimisiz?"
     },
     ru: {
@@ -76,7 +76,7 @@ export default function MagazinTab({ lang = "uz" }) {
       quantity: "Количество (Запас)",
       uploadingImg: "Загрузка изображения...",
       chooseImg: "Выбрать изображение",
-      imgReady: "Изображение готово!",
+      imgReady: "Изображение успешно загружено!",
       publish: "Опубликовать",
       availablePrizes: "📦 Доступные подарки в магазине",
       noPrizes: "В магазине пока нет подарков.",
@@ -108,7 +108,7 @@ export default function MagazinTab({ lang = "uz" }) {
       toastDeleted: "Подарок удален.",
       toastStatusChanged: "Статус заказа изменен: ",
       confirmFreezeAll: "Вы действительно хотите заморозить ВСЕ товары в магазине одновременно?",
-      confirmActivateAll: "Вы действительно хотите выставить все товары на продажу? (Каждому будет присвоено по 10 шт.)",
+      confirmActivateAll: "Вы действительно хотите выставить все товары на продажу?",
       confirmDelete: "Вы действительно хотите удалить этот подарок из магазина?"
     }
   };
@@ -120,6 +120,7 @@ export default function MagazinTab({ lang = "uz" }) {
       const { data: prizesData, error: pErr } = await supabase
         .from("prizes")
         .select("*")
+        .order("position", { ascending: true, nullsFirst: true })
         .order("created_at", { ascending: false }); 
       if (pErr) throw pErr;
 
@@ -139,6 +140,35 @@ export default function MagazinTab({ lang = "uz" }) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // 🔄 TARTIBNI O'ZGARTIRISH (Yuqoriga / Pastga) VA BAZAGA SAQLASH
+  const movePrizeOrder = async (index, direction) => {
+    const newPrizes = [...prizes];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= newPrizes.length) return;
+
+    // Massiv ichida o'rinlarini almashtiramiz
+    const temp = newPrizes[index];
+    newPrizes[index] = newPrizes[targetIndex];
+    newPrizes[targetIndex] = temp;
+
+    setPrizes(newPrizes);
+
+    try {
+      // Har birining position raqamini yangilab bazaga yuboramiz
+      for (let i = 0; i < newPrizes.length; i++) {
+        await supabase
+          .from("prizes")
+          .update({ position: i + 1 })
+          .eq("id", newPrizes[i].id);
+      }
+      toast.success("Tartib saqlandi! ✨");
+    } catch (err) {
+      toast.error("Tartibni saqlashda xatolik: " + err.message);
+      fetchData();
+    }
+  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -229,12 +259,14 @@ export default function MagazinTab({ lang = "uz" }) {
     if (!name.trim() || !price || !stock) return toast.error(t.toastFieldsError);
     setLoading(true);
     try {
+      const newPosition = prizes.length > 0 ? prizes.length + 1 : 1;
       const { error } = await supabase.from("prizes").insert([
         { 
           name: name.trim(), 
           price: Number(price),
           stock: Number(stock), 
-          image_url: imageUrl.trim() || null 
+          image_url: imageUrl.trim() || null,
+          position: newPosition
         }
       ]);
       if (error) throw error;
@@ -350,8 +382,29 @@ export default function MagazinTab({ lang = "uz" }) {
       <h3>{t.availablePrizes} ({prizes.length} ta)</h3>
       <div className="prizes-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px", marginBottom: "40px" }}>
         {prizes.length > 0 ? (
-          prizes.map(p => (
-            <div key={p.id} className="prize-admin-card" style={{ background: "#ffffff", borderRadius: "10px", padding: "14px", border: "1px solid #e2e8f0", position: "relative", textAlign: "center" }}>
+          prizes.map((p, index) => (
+            <div key={p.id} className="prize-admin-card" style={{ background: "#ffffff", borderRadius: "10px", padding: "14px", border: "1px solid #e2e8f0", textAlign: "center", position: "relative" }}>
+              
+              {/* ⬆️ YUQORIGA VA ⬇️ PASTGA SURISH TUGMALARI */}
+              <div style={{ display: "flex", gap: "6px", justifyContent: "center", marginBottom: "10px" }}>
+                <button
+                  onClick={() => movePrizeOrder(index, "up")}
+                  disabled={index === 0}
+                  style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", padding: "4px 10px", borderRadius: "4px", cursor: index === 0 ? "not-allowed" : "pointer", opacity: index === 0 ? 0.4 : 1 }}
+                  title="Yuqoriga surish"
+                >
+                  <FaArrowUp size={12} />
+                </button>
+                <button
+                  onClick={() => movePrizeOrder(index, "down")}
+                  disabled={index === prizes.length - 1}
+                  style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", padding: "4px 10px", borderRadius: "4px", cursor: index === prizes.length - 1 ? "not-allowed" : "pointer", opacity: index === prizes.length - 1 ? 0.4 : 1 }}
+                  title="Pastga surish"
+                >
+                  <FaArrowDown size={12} />
+                </button>
+              </div>
+
               <div style={{ width: "100%", height: "120px", background: "#f1f5f9", borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: "10px" }}>
                 {p.image_url ? (
                   <img src={p.image_url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
