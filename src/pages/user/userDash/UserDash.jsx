@@ -21,6 +21,12 @@ export default function UserDash() {
   const [activeTab, setActiveTab] = useState("home");
   const [bonusCode, setBonusCode] = useState("");
 
+  // 💱 VALYUTA STATE'LARI
+  const [displayCurrency, setDisplayCurrency] = useState(
+    localStorage.getItem("app_currency") || "usd"
+  );
+  const [usdRate, setUsdRate] = useState(12800); // Admin belgilaydigan standart kurs
+
   // 📅 FILTRLAR STATE'LARI
   const [year, setYear] = useState("2026");
   const [month, setMonth] = useState("Iyul");
@@ -46,6 +52,30 @@ export default function UserDash() {
   // 🌐 TIL HOLATI ("app_lang" orqali)
   const [lang, setLang] = useState(localStorage.getItem("app_lang") || "uz");
   const navigate = useNavigate();
+
+  // 💵 SUPABASE'DAN DOLLAR KURSINI OLISH
+  const fetchUsdRate = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("shop_settings")
+        .select("usd_rate")
+        .eq("id", 1)
+        .single();
+
+      if (!error && data) {
+        setUsdRate(data.usd_rate);
+      }
+    } catch (err) {
+      console.error("Valyuta kursini yuklashda xatolik:", err);
+    }
+  }, []);
+
+  // 💱 VALYUTANI ALMASHTIRISH FUNKSIYASI
+  const handleCurrencyChange = (newCurrency) => {
+    setDisplayCurrency(newCurrency);
+    localStorage.setItem("app_currency", newCurrency);
+    window.dispatchEvent(new Event("storage"));
+  };
 
   // 🔄 Tabni o'zgartirish
   const handleTabChange = (tabName) => {
@@ -73,14 +103,12 @@ export default function UserDash() {
     }
   }, []);
 
-  // 🛠 TILNI ALMASHTIRISH FUNKSIYASI (Katalog sinxronizatsiyasi bilan)
+  // 🛠 TILNI ALMASHTIRISH FUNKSIYASI
   const changeLanguage = async (newLang) => {
     setLang(newLang);
     localStorage.setItem("app_lang", newLang);
-    // Katalog komponentidagi localStorage.getItem("lang") bilan ham moslik ta'minlanadi
     localStorage.setItem("lang", newLang); 
     
-    // ⚡ Boshqa ochiq komponentlarni ham til o'zgarganidan ogohlantirish
     window.dispatchEvent(new Event("storage"));
     
     if (currentUser?.id) {
@@ -257,9 +285,13 @@ export default function UserDash() {
     }
     const user = JSON.parse(storedUser);
     setCurrentUser(user);
+    
+    // Ma'lumotlar va valyuta kursini yuklash
     fetchUserData(user, year, month, statType);
     checkActiveCampaign();
+    fetchUsdRate();
 
+    // ⚡ Realtime obuna (baza o'zgarsa ma'lumotlarni yangilash)
     const realtimeSubscription = supabase
       .channel(`user-dash-realtime-${user.id}`)
       .on(
@@ -272,12 +304,17 @@ export default function UserDash() {
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
         () => { fetchUserData(user, year, month, statType); }
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "shop_settings", filter: `id=eq.1` },
+        () => { fetchUsdRate(); } // Admin kursni o'zgartirsa avtomatik yangilanadi
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(realtimeSubscription);
     };
-  }, [navigate, checkActiveCampaign, fetchUserData, year, month, statType]);
+  }, [navigate, checkActiveCampaign, fetchUserData, fetchUsdRate, year, month, statType]);
 
   const confirmLogout = () => {
     localStorage.removeItem("user");
@@ -285,6 +322,7 @@ export default function UserDash() {
     navigate("/login");
   };
 
+  // 🎯 KOD KIRITISH VA DINAMIK TOAST CHIQARISH FUNKSIYASI
   const handleSendCode = async () => {
     if (loading) return;
     const trimmedCode = bonusCode.trim().toUpperCase();
@@ -309,6 +347,7 @@ export default function UserDash() {
         return;
       }
 
+      // 1. Used codes ga jo'natish
       const { error: insertError } = await supabase
         .from("used_codes")
         .insert([{ 
@@ -319,13 +358,53 @@ export default function UserDash() {
 
       if (insertError) throw insertError;
 
+      // 2. Promo kod holatini band qilish
       await supabase.from("promo_codes").update({ is_active: false }).eq("id", promoCode.id);
 
-      toast.success(lang === "uz" ? "Kod muvaffaqiyatli yuborildi! ⏳" : "Код успешно отправлен! ⏳");
+      // 3. 🎁 DINAMIK SOVG'A VA NASOS HISOB-KITOBI
+      const currentBalance = currentUser?.bonus || 0; // Hozirgi dollar/ball (Masalan $30 yoki $32)
+      const pointsPerPump = Number(promoCode.points) || 2; // Har bir kod/nasos beradigan dollar ($2)
+
+      // Magazindan eng yaqin olish mumkin bo'lgan sovg'ani qidirish
+      let targetGiftPrice = 36; // Birlamchi target sovg'a ($36 nasos)
+      const { data: gifts } = await supabase
+        .from("products")
+        .select("price")
+        .gt("price", currentBalance)
+        .order("price", { ascending: true })
+        .limit(1);
+
+      if (gifts && gifts.length > 0) {
+        targetGiftPrice = gifts[0].price;
+      }
+
+      const remainingNeeded = Math.max(0, targetGiftPrice - currentBalance); // Yetmayotgan summa
+      const neededPumps = Math.ceil(remainingNeeded / pointsPerPump); // Nechta nasos kerakligi
+
+      // 4. TOAST ORQALI DINAMIK XABAR CHIQARISH
+      if (remainingNeeded > 0) {
+        toast.info(
+          lang === "uz" 
+            ? ` Kod yuborildi!\nHozir sizda ${currentBalance}$ bor. ${targetGiftPrice}$ sovg'aga erishish uchun yana ${neededPumps} ta nasos (${remainingNeeded}$) kiritishingiz kerak!`
+            : ` Код отправлен!\nСейчас у вас ${currentBalance}$. Для получения подарка за ${targetGiftPrice}$ вам нужно еще ${neededPumps} насоса (${remainingNeeded}$)`,
+          {
+            position: "top-right",
+            autoClose: 7000,
+            style: { whiteSpace: "pre-line" } // Matn chiroyli ko'rinishi uchun
+          }
+        );
+      } else {
+        toast.success(
+          lang === "uz" 
+            ? " Kod yuborildi! Sizda sovg'a olish uchun yetarli ball mavjud! 🎉" 
+            : " Код отправлен! У вас достаточно баллов для получения подарка! 🎉"
+        );
+      }
+
       setBonusCode("");
       handleTabChange("home");
-      
       fetchUserData(currentUser, year, month, statType);
+
     } catch (err) {
       toast.error("Xatolik yuz berdi: " + err.message);
     } finally {
@@ -362,11 +441,14 @@ export default function UserDash() {
 
   return (
     <div className="dash-container">
+      {/* 🟢 HEADERGA VALYUTA PROPSLARI */}
       <Header 
         lang={lang} 
         setLang={changeLanguage} 
         currentBonus={currentUser?.bonus || 0} 
         onProfileClick={() => handleTabChange("settings")} 
+        displayCurrency={displayCurrency}
+        onCurrencyChange={handleCurrencyChange}
       />
 
       <Sidebar 
@@ -412,10 +494,12 @@ export default function UserDash() {
             />
           )}
 
-          {/* 📋 KATALOG TAB: Til sinxronizatsiyasi to'liq ta'minlandi */}
+          {/* 🟢 KATALOGGA USD_RATE VA DISPLAY_CURRENCY PROPSLARI UZATILDI */}
           {activeTab === "katalog" && (
             <UserKatalog 
               lang={lang}
+              displayCurrency={displayCurrency}
+              usdRate={usdRate}
               onBack={() => handleTabChange("home")} 
             />
           )}
@@ -425,6 +509,8 @@ export default function UserDash() {
               currentUser={currentUser} 
               fetchUserData={() => fetchUserData(currentUser, year, month, statType)} 
               lang={lang}
+              displayCurrency={displayCurrency}
+              usdRate={usdRate}
               onBack={() => handleTabChange("home")} 
             />
           )}

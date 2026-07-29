@@ -306,11 +306,9 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
     const numPrice = Number(itemPrice);
 
     if (displayCurrency === 'uzs') {
-      // Agar mahsulot dollari kiritilgan bo'lsa so'mga o'giramiz, so'm bo'lsa o'zicha qoladi
       const somVal = (itemCurrency === 'usd') ? numPrice * rate : numPrice;
       return `${Math.round(somVal).toLocaleString('uz-UZ')} so'm`;
     } else {
-      // Agar USD tanlangan bo'lsa
       const usdVal = (itemCurrency === 'uzs' || itemCurrency === 'sum') ? (numPrice / rate) : numPrice;
       return `$${usdVal % 1 === 0 ? usdVal : usdVal.toFixed(2)}`;
     }
@@ -510,7 +508,7 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
             
-            {/* 🎯 VALYUTANI ALMASHTIRISH TOGGLE (NARSALAR QAYSI VALYUTADA KO'RINSIN) */}
+            {/* 🎯 VALYUTANI ALMASHTIRISH TOGGLE */}
             <div style={{
               display: 'flex',
               alignItems: 'center',

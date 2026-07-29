@@ -2,11 +2,28 @@ import React from "react";
 import { FaUserCircle, FaAward } from "react-icons/fa";
 import "./header.css";
 
-export default function Header({ lang, currentBonus, onProfileClick }) {
-  const logoText = lang === "uz" ? "USTA PROFI" : "Профиль специалиста";
-  
-  // 💵 Ball so'zi dollar belgisiga o'zgartirildi
-  const pointsText = "$"; 
+export default function Header({ 
+  lang, 
+  currentBonus = 0, 
+  onProfileClick,
+  displayCurrency = 'usd', 
+  onCurrencyChange,
+  usdRate = 12800 // Default kurs agar prop uzatilmasa
+}) {
+  const logoText = lang === "uz" ? "USTA PROFI" : "Профиль";
+
+  // === BALANS / BONUSNI FORMATLASH FUNKSIYASI ===
+  const formatBonus = () => {
+    const num = Number(currentBonus) || 0;
+    
+    if (displayCurrency === 'uzs') {
+      const somVal = Math.round(num * usdRate);
+      return `${somVal.toLocaleString('uz-UZ')} so'm`;
+    } else {
+      const usdVal = num % 1 === 0 ? num : num.toFixed(2);
+      return `${usdVal} $`;
+    }
+  };
 
   return (
     <header className="mobile-app-header">
@@ -17,25 +34,44 @@ export default function Header({ lang, currentBonus, onProfileClick }) {
           <h1 className="header-logo-title">{logoText}</h1>
         </div>
 
-        {/* 2. Bonus chipi va Profil */}
+        {/* 2. O'ng tarafdagi elementlar */}
         <div className="header-right">
-          
-          {/* Bonus ballari bosilganda ham sozlamalarga o'tadi */}
-          <div className="header-bonus-chip" onClick={onProfileClick} style={{ cursor: "pointer" }}>
+
+          {/* 💱 Valyuta almashtirish toggle */}
+          {onCurrencyChange && (
+            <div className="currency-toggle-wrapper">
+              <button
+                type="button"
+                className={`currency-btn ${displayCurrency === 'usd' ? 'active-usd' : ''}`}
+                onClick={() => onCurrencyChange('usd')}
+              >
+                USD
+              </button>
+              <button
+                type="button"
+                className={`currency-btn ${displayCurrency === 'uzs' ? 'active-uzs' : ''}`}
+                onClick={() => onCurrencyChange('uzs')}
+              >
+                SO'M
+              </button>
+            </div>
+          )}
+
+          {/* Bonus chipi */}
+          <div className="header-bonus-chip" onClick={onProfileClick}>
             <div className="bonus-icon-wrapper">
               <FaAward className="bonus-star-icon" />
             </div>
             <span className="bonus-amount-text">
-              {currentBonus} <span className="bonus-unit-label">{pointsText}</span>
+              {formatBonus()}
             </span>
           </div>
 
-          {/* Profil avatarni bosganda sozlamalarga o'tadi */}
+          {/* Profil avatari */}
           <button 
             className="header-profile-trigger-btn" 
             onClick={onProfileClick}
             aria-label="Profile"
-            style={{ cursor: "pointer" }}
           >
             <FaUserCircle className="header-user-avatar-icon" />
           </button>

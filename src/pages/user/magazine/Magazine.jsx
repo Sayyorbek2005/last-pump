@@ -5,12 +5,72 @@ import { FaCoins, FaGift, FaShoppingBag, FaClock, FaCheckCircle, FaTimesCircle, 
 import { FiArrowLeft } from "react-icons/fi"; 
 import "../magazine/magazine.css";
 
-export default function UserMagazin({ currentUser, lang = "uz", onBack }) { 
+export default function UserMagazin({ 
+  currentUser, 
+  lang = "uz", 
+  onBack,
+  displayCurrency: parentCurrency, 
+  usdRate: parentRate 
+}) { 
   const [prizes, setPrizes] = useState([]);
   const [myOrders, setMyOrders] = useState([]);
   const [userBonus, setUserBonus] = useState(0);
   const [loadingOrderId, setLoadingOrderId] = useState(null);
   const [showOrders, setShowOrders] = useState(false); 
+
+  // === DYNAMIC CURRENCY & RATE STATES ===
+  const [rate, setRate] = useState(parentRate || 12800);
+  const [displayCurrency, setDisplayCurrency] = useState(parentCurrency || localStorage.getItem('app_currency') || 'usd');
+
+  // React to prop updates from Header/Parent
+  useEffect(() => {
+    if (parentCurrency) setDisplayCurrency(parentCurrency);
+  }, [parentCurrency]);
+
+  useEffect(() => {
+    if (parentRate) setRate(parentRate);
+  }, [parentRate]);
+
+  // Sync with localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const localCurr = localStorage.getItem('app_currency');
+      if (localCurr && !parentCurrency) {
+        setDisplayCurrency(localCurr);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [parentCurrency]);
+
+  // Fetch rate from DB if not passed via props
+  const fetchRateSetting = useCallback(async () => {
+    if (parentRate) return;
+    try {
+      const { data } = await supabase
+        .from('shop_settings')
+        .select('usd_rate')
+        .eq('id', 1)
+        .single();
+
+      if (data && data.usd_rate) {
+        setRate(data.usd_rate);
+      }
+    } catch (err) {
+      console.error("Error fetching rate:", err);
+    }
+  }, [parentRate]);
+
+  // Helper function to format price based on selected currency
+  const formatPrice = useCallback((amountInUsd) => {
+    const num = Number(amountInUsd) || 0;
+    if (displayCurrency === 'uzs') {
+      const somVal = num * rate;
+      return `${Math.round(somVal).toLocaleString('uz-UZ')} so'm`;
+    } else {
+      return `$${num % 1 === 0 ? num : num.toFixed(2)}`;
+    }
+  }, [displayCurrency, rate]);
 
   const translations = {
     uz: {
@@ -18,11 +78,10 @@ export default function UserMagazin({ currentUser, lang = "uz", onBack }) {
       storeTitle: "🎁 Sovg'alar do'koni",
       storeSub: "Yig'gan mablag'laringizni ajoyib sovg'alarga almashtiring!",
       yourBalance: "Sizning balansingiz:",
-      points: "$", // 💡 ball -> $ ga o'zgartirildi
       availablePrizes: "Mavjud sovg'alar",
       noPrizes: "Hozircha do'konda sovg'alar yo'q.",
       orderHistory: "Buyurtmalaringiz tarixi",
-      noOrders: "Sizda hali buyurtmalar magvjud emas.",
+      noOrders: "Sizda hali buyurtmalar mavjud emas.",
       thName: "Sovg'a nomi",
       thPoints: "Sarflangan mablag'",
       thDate: "Sana",
@@ -34,7 +93,7 @@ export default function UserMagazin({ currentUser, lang = "uz", onBack }) {
       btnLoading: "Yuborilmoqda...",
       btnNotAvailable: "Do'kon yopiq",
       btnBuy: "Sotib olish",
-      btnNoPoints: "Mablag' yetarli emas", // 💡 Ball -> Mablag'
+      btnNoPoints: "Mablag' yetarli emas",
       toastFetchError: "Ma'lumotlarni yuklashda xatolik: ",
       toastStockOut: "Kechirasiz, bu mahsulot sotuvda tugagan yoki admin tomonidan muzlatilgan! 🔒",
       toastNoPoints: "Kechirasiz, balansingizda yetarli mablag' mavjud emas! 😔",
@@ -50,7 +109,6 @@ export default function UserMagazin({ currentUser, lang = "uz", onBack }) {
       storeTitle: "🎁 Магазин подарков",
       storeSub: "Обменивайте накопленные средства на отличные подарки!",
       yourBalance: "Ваш баланс:",
-      points: "$", // 💡 балл -> $ ga o'zgartirildi
       availablePrizes: "Доступные подарки",
       noPrizes: "В магазине пока нет подарков.",
       orderHistory: "История ваших заказов",
@@ -116,7 +174,8 @@ export default function UserMagazin({ currentUser, lang = "uz", onBack }) {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchRateSetting();
+  }, [fetchData, fetchRateSetting]);
 
   const handleBuyPrize = async (prize) => {
     if (prize.stock <= 0) {
@@ -127,10 +186,10 @@ export default function UserMagazin({ currentUser, lang = "uz", onBack }) {
       return toast.error(t.toastNoPoints);
     }
 
-    // 💡 Tasdiqlash oynasidagi matn ham dollar ko'rinishiga o'tkazildi
+    const priceFormatted = formatPrice(prize.price);
     const confirmMessage = lang === "ru"
-      ? `${t.confirmPrefix}${prize.name}${t.confirmSuffix}${prize.price}${t.points}?`
-      : `${t.confirmPrefix}${prize.name}${t.confirmSuffix}${prize.price}${t.points}ga sotib olmoqchimisiz?`;
+      ? `${t.confirmPrefix}${prize.name}${t.confirmSuffix}${priceFormatted}?`
+      : `${t.confirmPrefix}${prize.name}${t.confirmSuffix}${priceFormatted} ga sotib olmoqchimisiz?`;
 
     const confirmBuy = window.confirm(confirmMessage);
     if (!confirmBuy) return;
@@ -208,8 +267,7 @@ export default function UserMagazin({ currentUser, lang = "uz", onBack }) {
           <FaCoins className="coin-icon" />
           <div className="balance-text">
             <span>{t.yourBalance}</span>
-            {/* 💡 strong tartibi o'zgartirildi: oldin raqam keyin belgi */}
-            <strong>{userBonus} {t.points}</strong>
+            <strong>{formatPrice(userBonus)}</strong>
           </div>
         </div>
       </div>
@@ -240,8 +298,7 @@ export default function UserMagazin({ currentUser, lang = "uz", onBack }) {
                 <div className="prize-details">
                   <h4>{prize.name}</h4>
                   <div className="prize-price-tag">
-                    {/* 💡 Narxlar yonidagi yozuvlar ham o'zgartirildi */}
-                    <FaCoins /> {prize.price} {t.points}
+                    <FaCoins /> {formatPrice(prize.price)}
                   </div>
                   
                   <button
@@ -309,8 +366,7 @@ export default function UserMagazin({ currentUser, lang = "uz", onBack }) {
                     {myOrders.map((order) => (
                       <tr key={order.id}>
                         <td><strong>{order.prizes?.name || t.deletedPrize}</strong></td>
-                        {/* 💡 Jadval ichidagi ball so'zi o'rniga $ belgisi qo'yildi */}
-                        <td className="table-price">{order.prizes?.price || 0} {t.points}</td>
+                        <td className="table-price">{formatPrice(order.prizes?.price || 0)}</td>
                         <td>{new Date(order.created_at).toLocaleDateString(lang === "ru" ? "ru-RU" : "uz-UZ")}</td>
                         <td>
                           <span className={`user-status-badge ${order.status}`}>

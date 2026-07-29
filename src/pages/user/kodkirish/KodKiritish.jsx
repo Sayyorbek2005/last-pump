@@ -7,10 +7,11 @@ import {
   FaArrowLeft,
   FaHistory
 } from "react-icons/fa";
+import { toast } from "react-toastify";
 import { supabase } from "../../../supabase/client"; 
 import "./kodkiritish.css";
 
-// 🖼️ Rasmni loyihangiz papkasidan import qilish
+// 🖼️ Rasm importi
 import promoBanner from "./assets/image.png"; 
 
 export default function CodeTab({ lang = "uz", userId = "", onBack }) {
@@ -35,7 +36,6 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
       statusPending: "Kutilmoqda",
       statusRejected: "Rad etildi",
       noData: "Siz hali kod kiritmadingiz",
-      alertSuccess: "Kod muvaffaqiyatli tekshirishga yuborildi!",
       alertWarning: "Iltimos, faollashtirish uchun kodni kiriting!",
       alertError: "Xatolik yuz berdi: ",
       alertErrPaused: "Ushbu promo-kod vaqtincha to'xtatilgan (pauzada)! ⏸️",
@@ -58,7 +58,6 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
       statusPending: "В ожидании",
       statusRejected: "Отклонен",
       noData: "Вы еще не вводили коды",
-      alertSuccess: "Код успешно отправлен на проверку!",
       alertWarning: "Пожалуйста, введите код для активации!",
       alertError: "Произошла ошибка: ",
       alertErrPaused: "Этот промокод временно приостановлен! ⏸️",
@@ -116,7 +115,7 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
 
   const handleSendCodeSubmit = useCallback(async () => {
     if (!bonusCode.trim()) {
-      alert(t.alertWarning);
+      toast.warning(t.alertWarning);
       return;
     }
 
@@ -124,14 +123,14 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
     try {
       const activeId = await getActiveUserId();
       if (!activeId) {
-        alert("Tizimga kirgan foydalanuvchi aniqlanmadi. Profilga qayta kiring!");
+        toast.error("Tizimga kirgan foydalanuvchi aniqlanmadi!");
         setLoading(false);
         return;
       }
 
       const cleanCode = bonusCode.trim().toUpperCase();
 
-      // 🔍 1. Promo-kodni bazadan qidiramiz (points ni ham olamiz)
+      // 🔍 1. Promo-kodni promo_codes jadvalidan izlaymiz
       const { data: promoData, error: promoError } = await supabase
         .from("promo_codes")
         .select("id, status, is_active, points")
@@ -139,38 +138,34 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
         .maybeSingle();
 
       if (promoError || !promoData) {
-        alert(t.alertErrNotFound);
+        toast.error(t.alertErrNotFound);
         setLoading(false);
         return;
       }
 
-      // ⏸️ 2. AGAR KOD PAUZADA BO'LSA
+      // ⏸️ 2. Pauza holatini tekshirish
       if (promoData.status === "paused" || promoData.is_active === false) {
-        alert(t.alertErrPaused);
+        toast.error(t.alertErrPaused);
         setLoading(false);
         return;
       }
 
-      // 🔍 3. Kod allaqachon ishlatilganligini tekshiramiz
-      const { data: alreadyUsed, error: checkError } = await supabase
+      // 🔍 3. Ishlatilganligini tekshirish
+      const { data: alreadyUsed } = await supabase
         .from("used_codes")
         .select("id")
         .eq("user_id", activeId)
         .eq("code_id", promoData.id)
         .maybeSingle();
 
-      if (checkError) {
-        console.error("Tekshirishda xato:", checkError);
-      }
-
       if (alreadyUsed) {
-        alert(t.alertErrAlreadyUsed);
+        toast.error(t.alertErrAlreadyUsed);
         setLoading(false);
         return;
       }
 
-      // 📝 4. used_codes jadvaliga points ni ham yozib yuboramiz
-      const codePoints = Number(promoData.points) || 2;
+      // 📝 4. used_codes jadvaliga saqlash
+      const codePoints = Number(promoData.points) || 2; 
 
       const { error: dbError } = await supabase
         .from("used_codes")
@@ -186,26 +181,76 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
         ]);
 
       if (dbError) {
-        alert("Bazaga yozishda xatolik: " + dbError.message);
+        toast.error("Bazaga yozishda xatolik: " + dbError.message);
         setLoading(false);
         return;
       }
 
+      // 5. Promo-kodni faolsizlantirish
+      await supabase.from("promo_codes").update({ is_active: false }).eq("id", promoData.id);
+
+      // 🎁 6. Profiles va Prizes jadvallaridan ma'lumotlarni olamiz
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("bonus")
+        .eq("id", activeId)
+        .single();
+
+      // Hozirgi balans ($32)
+      const currentBalance = Number(userProfile?.bonus || 0);
+
+      // Prizes jadvalidan sovg'alar ro'yxatini olamiz
+      const { data: prizesData } = await supabase
+        .from("prizes")
+        .select("name, price");
+
       setBonusCode("");
-      
-      if (showHistory) {
-        fetchHistory();
+      if (showHistory) fetchHistory();
+
+      // 7. Balansdan qimmat bo'lgan eng yaqin sovg'ani topamiz
+      let nextTargetGift = null;
+
+      if (prizesData && prizesData.length > 0) {
+        const sortedPrizes = prizesData
+          .map(p => ({ title: p.name, price: Number(p.price || 0) }))
+          .filter(p => p.price > currentBalance) // $32 dan qimmat sovg'alar
+          .sort((a, b) => a.price - b.price);
+
+        if (sortedPrizes.length > 0) {
+          nextTargetGift = sortedPrizes[0]; // $36 li "ssss" sovg'asi
+        }
       }
-      
-      alert(t.alertSuccess);
+
+      // 8. SODDA VA ANIQ TOAST XABARI
+      if (nextTargetGift) {
+        const remainingNeeded = nextTargetGift.price - currentBalance; // 36 - 32 = 4$
+
+        toast.info(
+          lang === "uz" 
+            ? `Kod yuborildi!\nHozir sizda ${currentBalance}$ bor. ${nextTargetGift.price}$ li ${nextTargetGift.title} uchun yana ${remainingNeeded}$ kerak!`
+            : `Код отправлен!\nСейчас у вас ${currentBalance}$. Для подарка "${nextTargetGift.title}" за ${nextTargetGift.price}$ вам нужно еще ${remainingNeeded}$!`,
+          {
+            position: "top-right",
+            autoClose: 7000,
+            style: { whiteSpace: "pre-line" }
+          }
+        );
+      } else {
+        toast.success(
+          lang === "uz" 
+            ? `Kod yuborildi!\nHozir sizda ${currentBalance}$ bor. Siz do'kondagi barcha sovg'alarni sotib ala olasiz! 🎉`
+            : `Код отправлен!\nСейчас у вас ${currentBalance}$. Вы можете купить любой подарок! 🎉`,
+          { position: "top-right", autoClose: 7000, style: { whiteSpace: "pre-line" } }
+        );
+      }
 
     } catch (error) {
-      console.error("Kutilmagan xatolik:", error);
-      alert(t.alertError + error.message); 
+      console.error("Xatolik:", error);
+      toast.error(t.alertError + error.message); 
     } finally {
       setLoading(false);
     }
-  }, [bonusCode, getActiveUserId, fetchHistory, showHistory, t]);
+  }, [bonusCode, getActiveUserId, fetchHistory, showHistory, t, lang]);
 
   const renderStatusBadge = (status) => {
     if (status === "approved" || status === "confirmed") {
@@ -255,7 +300,6 @@ export default function CodeTab({ lang = "uz", userId = "", onBack }) {
             {loading ? t.checking : t.btnConfirm}
           </button>
 
-          {/* 🖼️ Rasm */}
           <div className="promo-image-container" style={{ marginTop: "20px", textAlign: "center" }}>
             <img 
               src={promoBanner} 

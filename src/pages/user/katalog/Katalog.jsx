@@ -139,14 +139,26 @@ const translations = {
   }
 };
 
-export default function UserCatalog() {
+export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: parentRate, onBack, lang: parentLang }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [lang, setLang] = useState(localStorage.getItem('lang') || 'uz');
+  const [lang, setLang] = useState(parentLang || localStorage.getItem('lang') || 'uz');
   
   // === DOLLAR KURSI VA VALYUTA STATE-LARI ===
-  const [rate, setRate] = useState(12800);
-  const [displayCurrency, setDisplayCurrency] = useState('usd'); // 'usd' yoki 'uzs'
+  const [rate, setRate] = useState(parentRate || 12800);
+  const [displayCurrency, setDisplayCurrency] = useState(parentCurrency || localStorage.getItem('app_currency') || 'usd'); 
+
+  useEffect(() => {
+    if (parentCurrency) setDisplayCurrency(parentCurrency);
+  }, [parentCurrency]);
+
+  useEffect(() => {
+    if (parentRate) setRate(parentRate);
+  }, [parentRate]);
+
+  useEffect(() => {
+    if (parentLang) setLang(parentLang);
+  }, [parentLang]);
 
   // Navigatsiya holatlari
   const [selectedType, setSelectedType] = useState(null); 
@@ -165,6 +177,7 @@ export default function UserCatalog() {
 
   // === 1. BAZADAN DOLLAR KURSINI OLISH ===
   const fetchRateSetting = useCallback(async () => {
+    if (parentRate) return;
     try {
       const { data } = await supabase
         .from('shop_settings')
@@ -178,7 +191,7 @@ export default function UserCatalog() {
     } catch (err) {
       console.error("Kursni yuklashda xato:", err);
     }
-  }, []);
+  }, [parentRate]);
 
   // === 2. NARXNI FORMATLASH FUNKSIYASI ===
   const formatPrice = useCallback((itemPrice, itemCurrency = 'usd') => {
@@ -198,15 +211,17 @@ export default function UserCatalog() {
 
   useEffect(() => {
     const handleStorageChange = () => {
-      setLang(localStorage.getItem('lang') || 'uz');
+      setLang(localStorage.getItem('lang') || localStorage.getItem('app_lang') || 'uz');
+      const localCurr = localStorage.getItem('app_currency');
+      if (localCurr && !parentCurrency) {
+        setDisplayCurrency(localCurr);
+      }
     };
     window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(handleStorageChange, 1000);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
     };
-  }, []);
+  }, [parentCurrency]);
 
   const t = translations[lang] || translations['uz'];
 
@@ -269,63 +284,23 @@ export default function UserCatalog() {
   });
 
   const handleGoHome = () => {
-    window.location.href = "/";
+    if (onBack) {
+      onBack();
+    } else {
+      window.location.href = "/";
+    }
   };
 
   return (
     <div className="user-katalog-wrapper">
       <div className="user-katalog-max">
         
-        {/* TOP NAVIGATSIYA VA VALYUTA TOGGLE */}
-        <div className="user-katalog-navigation-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* TOP NAVIGATSIYA */}
+        <div className="user-katalog-navigation-bar">
           <button onClick={handleGoHome} className="user-go-home-btn">
             <span className="btn-icon">←</span>
             <span>{t.goHome}</span>
           </button>
-
-          {/* VALYUTA TUGMALARI */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: '#e2e8f0',
-            padding: '3px',
-            borderRadius: '8px'
-          }}>
-            <button
-              type="button"
-              onClick={() => setDisplayCurrency('usd')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: displayCurrency === 'usd' ? '#2563eb' : 'transparent',
-                color: displayCurrency === 'usd' ? '#ffffff' : '#475569',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                fontSize: '13px',
-                transition: 'all 0.2s'
-              }}
-            >
-              USD ($)
-            </button>
-            <button
-              type="button"
-              onClick={() => setDisplayCurrency('uzs')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: displayCurrency === 'uzs' ? '#16a34a' : 'transparent',
-                color: displayCurrency === 'uzs' ? '#ffffff' : '#475569',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                fontSize: '13px',
-                transition: 'all 0.2s'
-              }}
-            >
-              SO'M
-            </button>
-          </div>
         </div>
 
         {loading ? (
@@ -442,7 +417,6 @@ export default function UserCatalog() {
                             </p>
                             
                             <div className="prod-footer-row">
-                              {/* YANGILANGAN DYNAMIC NARX */}
                               <p className="prod-price-text">
                                 {formatPrice(item.price, item.currency)}
                               </p>
@@ -500,7 +474,6 @@ export default function UserCatalog() {
                   </div>
                   <div className="detail-box">
                     <span className="detail-label">{t.price}</span>
-                    {/* MODAL ICHIDAGI YANGILANGAN NARX */}
                     <p className="detail-val price-highlight">
                       {formatPrice(viewingProductDetails.price, viewingProductDetails.currency)}
                     </p>

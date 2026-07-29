@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   FaUsers, 
   FaTools, 
@@ -79,7 +79,7 @@ export default function DashboardTab({
   const t = translations[lang] || translations.uz;
 
   // --- KUTILAYOTGAN SO'ROVLARNI YUKLASH ---
-  const fetchPendingRequests = async () => {
+  const fetchPendingRequests = useCallback(async () => {
     setTableLoading(true);
     try {
       const { data, error } = await supabase
@@ -91,7 +91,7 @@ export default function DashboardTab({
           user_id,
           code_id,
           profiles ( full_name, phone, region ),
-          promo_codes ( id, code, is_active, points )
+          promo_codes ( id, code, status, is_active, points )
         `)
         .eq("status", "pending")
         .order("created_at", { ascending: true });
@@ -104,25 +104,41 @@ export default function DashboardTab({
     } finally {
       setTableLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchPendingRequests();
   }, []);
 
-  // --- TASDIQLASH FUNKSIYASI (Promo-kodning o'z balli bilan qo'shish) ---
+  // Realtime Obuna (Foydalanuvchi yangi kod kiritsa avtomatik yangilanadi)
+  useEffect(() => {
+    fetchPendingRequests();
+
+    const channel = supabase
+      .channel("dashboard-pending-codes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "used_codes" },
+        () => {
+          fetchPendingRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchPendingRequests]);
+
+  // --- TASDIQLASH FUNKSIYASI ---
   const handleApproveBonus = async (request) => {
     setActionLoadingId({ id: request.id, type: "approve" });
     try {
-      // 1. Bazadan kodning is_active va points (ball) qiymatini tekshiramiz
+      // 1. Bazadan promo-kod holatini tekshiramiz
       const { data: promoCheck, error: promoCheckErr } = await supabase
         .from("promo_codes")
-        .select("is_active, points")
+        .select("status, is_active, points")
         .eq("id", request.code_id)
         .single();
 
-      // Agar is_active false bo'lsa yoki topilmasa - demak kod pauza qilingan!
-      if (promoCheckErr || !promoCheck || promoCheck.is_active === false) {
+      // Mantiqiy tuzatish: status === "paused" bo'lgandagina pauza deb hisoblaydi
+      if (promoCheckErr || !promoCheck || promoCheck.status === "paused") {
         toast.error(t.errPausedCode);
         
         await supabase
@@ -130,14 +146,13 @@ export default function DashboardTab({
           .update({ status: "rejected" })
           .eq("id", request.id);
 
-        fetchPendingRequests();
+        setPendingRequests(prev => prev.filter(item => item.id !== request.id));
         return;
       }
 
-      // 🔍 Promo-kod bazada nechta ball ekanligini olamiz (agar bo'sh bo'lsa 2 deb oladi)
       const codePoints = Number(promoCheck.points) || 2;
 
-      // 2. used_codes statusini 'approved' qilamiz va ballni ham yozamiz
+      // 2. used_codes statusini 'approved' qilamiz
       const { error: statusError } = await supabase
         .from("used_codes")
         .update({ 
@@ -148,7 +163,7 @@ export default function DashboardTab({
 
       if (statusError) throw statusError;
 
-      // 3. MASTERGA ANIQ BALLNI QO'SHISH ('score' va 'bonus' ga)
+      // 3. Usta profiliga ball qo'shish
       const { data: profileData, error: profileFetchErr } = await supabase
         .from("profiles")
         .select("score, bonus")
@@ -156,24 +171,22 @@ export default function DashboardTab({
         .single();
 
       if (!profileFetchErr && profileData) {
-        const currentScore = profileData.score || 0;
-        const currentBonus = profileData.bonus || 0;
+        const currentScore = Number(profileData.score) || 0;
+        const currentBonus = Number(profileData.bonus) || 0;
         
-        const { error: scoreUpdateErr } = await supabase
+        await supabase
           .from("profiles")
           .update({ 
             score: currentScore + codePoints,
             bonus: currentBonus + codePoints 
           })
           .eq("id", request.user_id);
-
-        if (scoreUpdateErr) {
-          console.error("Ballni yangilashda xatolik:", scoreUpdateErr.message);
-        }
       }
 
       toast.success(lang === "uz" ? `Kod tasdiqlandi va +${codePoints} ball qo'shildi! 🎉` : `Код подтвержден и добавлено +${codePoints} балл! 🎉`);
-      fetchPendingRequests();
+      
+      // Local state dan olib tashlaymiz
+      setPendingRequests(prev => prev.filter(item => item.id !== request.id));
     } catch (err) {
       console.error("Tasdiqlash xatoligi:", err.message);
       toast.error(lang === "uz" ? "Xatolik yuz berdi" : "Произошла ошибка");
@@ -194,7 +207,7 @@ export default function DashboardTab({
       if (rejectError) throw rejectError;
 
       toast.warn(t.actionRejected);
-      fetchPendingRequests();
+      setPendingRequests(prev => prev.filter(item => item.id !== request.id));
     } catch (err) {
       console.error("Rad etish xatoligi:", err.message);
       toast.error(t.errorReject);

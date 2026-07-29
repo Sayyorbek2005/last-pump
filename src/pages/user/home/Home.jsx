@@ -19,10 +19,8 @@ import { supabase } from "../../../supabase/client";
 
 import "./home.css"; 
 
-// 📝 Ko'p tilli tarjimalar lug'ati (Yangiliklar uchun moslashtirildi)
 const translations = {
   uz: {
-    place: "-o'rin",
     confirmed: "Tasdiqlangan",
     pending: "Kutilmoqda",
     totalEntered: "Kiritilgan jami",
@@ -62,7 +60,6 @@ const translations = {
     statTitleModal: "Sizning statistikangiz"
   },
   ru: {
-    place: "-е место",
     confirmed: "Подтверждено",
     pending: "В ожидании",
     totalEntered: "Всего введено",
@@ -133,7 +130,6 @@ const inactiveNavButtonStyle = {
 
 export default function HomeTab({ 
   userId = "", 
-  rank = 1,
   confirmedCount = 0,
   pendingCount = 0,
   totalUsedCount = 0,
@@ -162,8 +158,75 @@ export default function HomeTab({
   
   const [isStatOpen, setIsStatOpen] = useState(false);
 
+  // 🌟 DINAMIK USER BONUSI (REALTIME)
+  const [userBonus, setUserBonus] = useState(0);
+
   const t = translations[lang] || translations["uz"];
   const currentMonthsList = lang === "ru" ? monthsRu : monthsUz;
+
+  // 🌟 Darajalarni Supabase bonusiga qarab dinamik aniqlash funksiyasi
+  const getUserLevel = (bonus) => {
+    const points = Number(bonus) || 0;
+    if (points >= 102) {
+      return { name: "Master", color: "#8b5cf6", bg: "#ede9fe" }; // Binafsha
+    } else if (points >= 22) {
+      return { name: "Pro", color: "#2563eb", bg: "#dbeafe" };    // Ko'k
+    } else {
+      return { name: "START", color: "#10b981", bg: "#d1fae5" }; // Yashil
+    }
+  };
+
+  // Foydalanuvchining joriy darajasi
+  const userLevel = getUserLevel(userBonus);
+
+  // 🔄 REALTIME: Supabase 'profiles' jadvalini kuzatish
+  useEffect(() => {
+    let activeUserId = userId;
+    if (!activeUserId) {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) activeUserId = JSON.parse(storedUser)?.id;
+    }
+
+    if (!activeUserId) return;
+
+    // 1. Dastlabki bonusni bazadan yuklash
+    const fetchUserBonus = async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("bonus")
+        .eq("id", activeUserId)
+        .single();
+
+      if (!error && data) {
+        setUserBonus(data.bonus || 0);
+      }
+    };
+
+    fetchUserBonus();
+
+    // 2. Bazada 'bonus' o'zgarsa (UPDATE), dinamik tarzda UI ni yangilash
+    const channel = supabase
+      .channel(`profile-bonus-changes-${activeUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${activeUserId}`
+        },
+        (payload) => {
+          if (payload.new && payload.new.bonus !== undefined) {
+            setUserBonus(payload.new.bonus);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   // DO'KONLARNI YUKLASH
   useEffect(() => {
@@ -254,7 +317,6 @@ export default function HomeTab({
         const startDate = new Date(parseInt(year), monthIndex, 1, 0, 0, 0).toISOString();
         const endDate = new Date(parseInt(year), monthIndex + 1, 1, 0, 0, 0).toISOString();
 
-        // 💡 "points" ustunini ham bazadan chaqirib olamiz
         const { data: codes, error } = await supabase
           .from("used_codes") 
           .select("created_at, status, points") 
@@ -266,15 +328,12 @@ export default function HomeTab({
         if (!isMounted) return;
 
         const approvedCodes = codes ? codes.filter(c => c.status === "approved" || c.status === "confirmed") : [];
-        
-        // 💡 Har bir kodning o'z ballini yig'ib chiqamiz (agar points mavjud bo'lmasa, sukut bo'yicha 1 olinadi)
         const confirmedBonusSum = approvedCodes.reduce((sum, c) => sum + (Number(c.points) || 1), 0);
         const totalCodesCount = codes ? codes.length : 0;
         
         setFilteredBonus(confirmedBonusSum);
         setMonthlyTotalCodes(totalCodesCount);
         
-        // 💡 O'rtacha bonus ballni to'g'ri hisoblash
         const avgBonus = approvedCodes.length > 0 ? (confirmedBonusSum / approvedCodes.length).toFixed(1) : "0.0";
         setMonthlyAverageBonus(avgBonus);
 
@@ -290,8 +349,6 @@ export default function HomeTab({
 
           generatedStats = last7Days.map(date => {
             const dayStr = date.toLocaleDateString(lang === "ru" ? 'ru-RU' : 'uz-UZ', { day: 'numeric', month: 'short' });
-            
-            // Shu kunga to'g'ri kelgan tasdiqlangan kodlarning ballarini yig'amiz
             const dayCodes = approvedCodes.filter(c => new Date(c.created_at).toDateString() === date.toDateString());
             const dayVal = dayCodes.reduce((sum, c) => sum + (Number(c.points) || 1), 0);
 
@@ -364,14 +421,20 @@ export default function HomeTab({
       {/* Yuqoridagi ko'rsatkichlar kartasi */}
       <div className="stats-card-container">
         <div className="stats-row">
+          
+          {/* 🌟 Dinamik Daraja (START / Pro / Master) */}
           <div className="inner-stat-box">
-            <div className="stat-icon-wrapper trophy-bg"><FaTrophy /></div>
+            <div className="stat-icon-wrapper" style={{ backgroundColor: userLevel.bg, color: userLevel.color }}>
+              <FaTrophy />
+            </div>
             <div className="stat-text-wrapper">
-              <span className="stat-val-text">{rank}{t.place}</span>
-              <span className="stat-lbl-text">{region}...</span>
+              <span className="stat-val-text" style={{ color: userLevel.color }}>{userLevel.name}</span>
+              <span className="stat-lbl-text">{region} (${userBonus})</span>
             </div>
           </div>
+
           <div className="vertical-divider"></div>
+          
           <div className="inner-stat-box">
             <div className="stat-icon-wrapper check-bg"><FaCheckCircle /></div>
             <div className="stat-text-wrapper">
@@ -679,7 +742,7 @@ export default function HomeTab({
               </div>
             )}
             <div className="home-modal-body">
-              <span style={{ fontSize: "12px", background: modalType === "campaign" ? "#dbeafe" : "#dbeafe", color: modalType === "campaign" ? "#1e40af" : "#1e40af", padding: "2px 8px", borderRadius: "12px", fontWeight: "600" }}>
+              <span style={{ fontSize: "12px", background: "#dbeafe", color: "#1e40af", padding: "2px 8px", borderRadius: "12px", fontWeight: "600" }}>
                 {modalType === "campaign" ? t.modalCampaign : t.modalTip}
               </span>
               <h3 style={{ marginTop: "8px" }}>{modalData.title}</h3>
