@@ -134,7 +134,7 @@ const translations = {
 
 export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: parentRate, onBack, lang: parentLang }) {
   const [products, setProducts] = useState([]);
-  const [categoryOrder, setCategoryOrder] = useState([]);
+  const [categoryOrder, setCategoryOrder] = useState([]); // Admin panel tartibi uchun
   const [loading, setLoading] = useState(true);
   const [lang, setLang] = useState(parentLang || localStorage.getItem('lang') || 'uz');
   
@@ -165,23 +165,6 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
     return imageMapping[trimmed] || null;
   };
 
-  const fetchRateSetting = useCallback(async () => {
-    if (parentRate) return;
-    try {
-      const { data } = await supabase
-        .from('shop_settings')
-        .select('usd_rate')
-        .eq('id', 1)
-        .single();
-
-      if (data && data.usd_rate) {
-        setRate(data.usd_rate);
-      }
-    } catch (err) {
-      console.error("Kursni yuklashda xato:", err);
-    }
-  }, [parentRate]);
-
   const formatPrice = useCallback((itemPrice, itemCurrency = 'usd') => {
     if (itemPrice === undefined || itemPrice === null || itemPrice === '' || itemPrice === 0) {
       return translations[lang]?.agreedPrice || 'Kelishilgan narx';
@@ -197,45 +180,52 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
     }
   }, [displayCurrency, rate, lang]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // 1. Mahsulotlarni sort_order bo'yicha olish
-        const { data: prodData, error: prodError } = await supabase
-          .from('products')
-          .select('*')
-          .order('sort_order', { ascending: true, nullsFirst: false });
+  // Ma'lumotlarni va sozlamalarni tortib kelish
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        if (prodError) {
-          const { data: fallbackData } = await supabase.from('products').select('*').order('id', { ascending: false });
-          setProducts(fallbackData || []);
-        } else {
-          setProducts(prodData || []);
+      // 1. Mahsulotlarni olish
+      const { data: prodData } = await supabase
+        .from('products')
+        .select('*')
+        .order('sort_order', { ascending: true, nullsFirst: false });
+      setProducts(prodData || []);
+
+      // 2. Admin panelning kategoriya tartibi va kursini shop_settings'dan olish
+      const { data: settingsData } = await supabase
+        .from('shop_settings')
+        .select('usd_rate, category_order')
+        .eq('id', 1)
+        .single();
+
+      if (settingsData) {
+        if (settingsData.usd_rate) setRate(settingsData.usd_rate);
+        if (settingsData.category_order && Array.isArray(settingsData.category_order)) {
+          setCategoryOrder(settingsData.category_order);
         }
-
-        // 2. Kataloglar tartibini settings jadvalidan olish
-        const { data: settingsData } = await supabase
-          .from('settings')
-          .select('*')
-          .eq('key', 'category_order')
-          .single();
-
-        if (settingsData && settingsData.value) {
-          setCategoryOrder(settingsData.value);
-        }
-
-      } catch (err) {
-        console.error('Kutilmagan xatolik:', err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error('Kutilmagan xatolik:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     fetchData();
-    fetchRateSetting();
-  }, [fetchRateSetting]);
+
+    // Realtime orqali admin o'zgarishlarini bir zumda yangilash
+    const channel = supabase
+      .channel('public:shop_and_products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shop_settings' }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
 
   const getProductTypeValue = useCallback((p) => {
     const arr = p.characteristics || p.specs || [];
@@ -247,17 +237,27 @@ export default function UserCatalog({ displayCurrency: parentCurrency, usdRate: 
     return p.type || p.category || "Boshqa";
   }, [lang]);
 
-  // Kataloglarni admin panelda saqlangan tartib bo'yicha chiqazish
+  // Admin paneldagi tartibni to'liq takrorlaydigan ro'yxat
   const allPumpTypes = useMemo(() => {
-    const typesFromProducts = products.map(p => getProductTypeValue(p)).filter(Boolean);
-    const combined = [...new Set(typesFromProducts)];
-
+    const typesFromProducts = [...new Set(products.map(p => getProductTypeValue(p)).filter(Boolean))];
+    
     if (categoryOrder.length > 0) {
-      const stillExisting = categoryOrder.filter(t => combined.includes(t));
-      const missing = combined.filter(t => !stillExisting.includes(t));
-      return [...stillExisting, ...missing];
+      // Admin panelda saqlangan tartib bo'yicha saralash
+      const sorted = [];
+      categoryOrder.forEach(cat => {
+        if (typesFromProducts.includes(cat)) {
+          sorted.push(cat);
+        }
+      });
+      // Ro'yxatda bor-u, lekin categoryOrder'ga kirmaganlari qolsa oxiriga qo'shamiz
+      typesFromProducts.forEach(cat => {
+        if (!sorted.includes(cat)) {
+          sorted.push(cat);
+        }
+      });
+      return sorted;
     }
-    return combined;
+    return typesFromProducts;
   }, [products, categoryOrder, getProductTypeValue]);
 
   const filteredProducts = useMemo(() => {

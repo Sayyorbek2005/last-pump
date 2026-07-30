@@ -164,31 +164,7 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
     if (lang) setCurrentLang(lang);
   }, [lang]);
 
-  // DOLLAR KURSINI 'shop_settings' JADVALIGA SAQLASH
-  const handleSaveRate = async () => {
-    const parsedRate = parseFloat(inputRate);
-    if (!parsedRate || parsedRate <= 0) {
-      alert("Iltimos, to'g'ri valyuta kursini kiriting!");
-      return;
-    }
-    setRate(parsedRate);
-    if (onRateUpdate) onRateUpdate(parsedRate);
-
-    try {
-      const { error } = await supabase.from('shop_settings').upsert({
-        id: 1,
-        usd_rate: parsedRate
-      });
-
-      if (error) throw error;
-      alert(currentLang === 'uz' ? "Valyuta kursi bazaga saqlandi!" : "Курс валюты сохранен в базе!");
-    } catch (err) {
-      console.error("Kursni saqlashda xatolik:", err);
-      alert("Xatolik: " + err.message);
-    }
-  };
-
-  // BAZADAN MAHSULOTLAR VA VALYUTA KURSINI OLISH
+  // DOLLAR KURSINI VA KATALOG TARTIBINI 'shop_settings' JADVALidan OLISH
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
@@ -200,13 +176,18 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
         setProducts(data || []);
       }
 
-      // shop_settings jadvalidan kursni olish
-      const { data: rateData } = await supabase.from('shop_settings').select('*').single();
-      if (rateData && rateData.usd_rate) {
-        const savedRate = Number(rateData.usd_rate);
-        setRate(savedRate);
-        setInputRate(savedRate);
-        if (onRateUpdate) onRateUpdate(savedRate);
+      // shop_settings jadvalidan kurs va kategoriya tartibini olish
+      const { data: settingsData } = await supabase.from('shop_settings').select('*').eq('id', 1).single();
+      if (settingsData) {
+        if (settingsData.usd_rate) {
+          const savedRate = Number(settingsData.usd_rate);
+          setRate(savedRate);
+          setInputRate(savedRate);
+          if (onRateUpdate) onRateUpdate(savedRate);
+        }
+        if (settingsData.category_order && Array.isArray(settingsData.category_order)) {
+          setCategoryOrder(settingsData.category_order);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -219,6 +200,7 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
     fetchProducts();
   }, [fetchProducts]);
 
+  // Agar shop_settings'da hali tartib saqlanmagan bo'lsa, mahsulotlardan yig'ib turadi
   useEffect(() => {
     const typesFromProducts = products.map(getTypeValue).filter(Boolean);
     const combined = new Set([...typesFromProducts, ...customCategories]);
@@ -235,6 +217,7 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
 
   const allTypes = categoryOrder;
 
+  // --- KATALOG TARTIBINI O'ZGARTIRISH VA BAZAGA SAQLASH ---
   const moveCategory = async (index, direction) => {
     const newOrder = [...categoryOrder];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -246,6 +229,18 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
     newOrder[targetIndex] = temp;
 
     setCategoryOrder(newOrder);
+
+    // Supabase'ga saqlash
+    try {
+      const { error } = await supabase.from('shop_settings').upsert({
+        id: 1,
+        category_order: newOrder
+      });
+
+      if (error) console.error("Katalog tartibini saqlashda xatolik:", error.message);
+    } catch (err) {
+      console.error("Bazaga yozishda xatolik:", err);
+    }
   };
 
   const moveProduct = async (index, direction) => {
@@ -266,6 +261,29 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
       fetchProducts();
     } catch (err) {
       console.error("Mahsulot tartibini saqlashda xatolik:", err);
+    }
+  };
+
+  const handleSaveRate = async () => {
+    const parsedRate = parseFloat(inputRate);
+    if (!parsedRate || parsedRate <= 0) {
+      alert("Iltimos, to'g'ri valyuta kursini kiriting!");
+      return;
+    }
+    setRate(parsedRate);
+    if (onRateUpdate) onRateUpdate(parsedRate);
+
+    try {
+      const { error } = await supabase.from('shop_settings').upsert({
+        id: 1,
+        usd_rate: parsedRate
+      });
+
+      if (error) throw error;
+      alert(currentLang === 'uz' ? "Valyuta kursi bazaga saqlandi!" : "Курс валюты сохранен в базе!");
+    } catch (err) {
+      console.error("Kursni saqlashda xatolik:", err);
+      alert("Xatolik: " + err.message);
     }
   };
 
@@ -295,6 +313,10 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
       setCustomCategories(prev => prev.map(c => c === oldName ? newName : c));
       const updatedOrder = categoryOrder.map(c => c === oldName ? newName : c);
       setCategoryOrder(updatedOrder);
+      
+      // Bazaga yangilangan tartibni yozish
+      await supabase.from('shop_settings').upsert({ id: 1, category_order: updatedOrder });
+
       alert(currentLang === 'uz' ? "Katalog nomi o'zgartirildi!" : "Название категории изменено!");
     } else {
       const dummySpecs = [
@@ -332,6 +354,10 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
       const filtered = categoryOrder.filter(t => t !== newName);
       const newOrder = newCatPosition === 'top' ? [newName, ...filtered] : [...filtered, newName];
       setCategoryOrder(newOrder);
+
+      // Bazaga yangi tartibni yozish
+      await supabase.from('shop_settings').upsert({ id: 1, category_order: newOrder });
+
       alert(currentLang === 'uz' ? "Yangi katalog yaratildi!" : "Категория создана!");
     }
 
@@ -356,7 +382,12 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
     }
 
     setCustomCategories(prev => prev.filter(c => c !== catName));
-    setCategoryOrder(prev => prev.filter(c => c !== catName));
+    const newOrder = categoryOrder.filter(c => c !== catName);
+    setCategoryOrder(newOrder);
+
+    // Bazadan o'chirilgach, tartibni ham yangilaymiz
+    await supabase.from('shop_settings').upsert({ id: 1, category_order: newOrder });
+
     alert(currentLang === 'uz' ? "Katalog va uning mahsulotlari o'chirildi!" : "Категория и ее товары удалены!");
     fetchProducts();
   };
@@ -829,7 +860,6 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
                     <input type="text" required value={formData.type_id} onChange={(e) => setFormData({ ...formData, type_id: e.target.value })} />
                   </div>
 
-                  {/* RASM TANLASH */}
                   <div className="admin-form-group image-upload-container">
                     <label className="image-upload-label">📁 Rasm yuklash (Kompyuterdan):</label>
                     <input type="file" accept="image/*" onChange={(e) => {
@@ -838,23 +868,6 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
                         setPreviewImage(URL.createObjectURL(e.target.files[0]));
                       }
                     }} className="file-input-field" />
-
-                    <div className="image-select-divider">— YOKI STATIK RASM —</div>
-
-                    <select
-                      value={formData.image_url}
-                      onChange={(e) => {
-                        setFormData({ ...formData, image_url: e.target.value });
-                        setImageFile(null);
-                        setPreviewImage(null);
-                      }}
-                      className="static-image-select"
-                    >
-                      <option value="">-- Statik rasm tanlang --</option>
-                      {Object.keys(imageMapping).map((imgKey) => (
-                        <option key={imgKey} value={imgKey}>{imgKey}</option>
-                      ))}
-                    </select>
 
                     {(previewImage || formData.image_url) && (
                       <div className="image-preview-wrapper">
@@ -867,7 +880,6 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
                     )}
                   </div>
 
-                  {/* XUSUSIYATLAR */}
                   <div className="form-row-split">
                     <div className="admin-form-group">
                       <label>Вх/Вых (Masalan: 1"x1"):</label>
@@ -899,49 +911,6 @@ export default function AdminCatalog({ lang, usdRate: propUsdRate, onRateUpdate 
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL 3: BATAFSIL KO'RISH MODALI */}
-        {viewingProductDetails && (
-          <div className="admin-modal-overlay">
-            <div className="admin-modal-card large">
-              <div className="modal-header-dark">
-                <div>
-                  <span className="modal-tag">{viewingProductDetails?.type_id?.toUpperCase()}</span>
-                  <h3>{currentLang === 'uz' ? viewingProductDetails?.title_uz : viewingProductDetails?.title_ru}</h3>
-                </div>
-                <button onClick={() => setViewingProductDetails(null)} className="modal-close-x">✕</button>
-              </div>
-
-              <div className="modal-body-content">
-                <div className="details-img-wrapper">
-                  <img
-                    src={getProductImageSrc(viewingProductDetails?.image_url, viewingProductDetails?.title_uz)}
-                    alt="Product"
-                    className="details-img-tag"
-                  />
-                </div>
-
-                <p className="details-price-row"><strong>Narxi:</strong> {formatPrice(viewingProductDetails?.price, viewingProductDetails?.currency)}</p>
-
-                <div className="details-specs-container">
-                  <p className="specs-title-label">Texnik xususiyatlar:</p>
-                  {(viewingProductDetails?.characteristics || viewingProductDetails?.specs || []).map((s, idx) => (
-                    <div key={idx} className="spec-row-item">
-                      <span>{s?.key}:</span>
-                      <strong>{s?.value}</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="modal-footer-actions">
-                <button onClick={() => setViewingProductDetails(null)} className="btn-modal-action cancel">
-                  Yopish
-                </button>
-              </div>
             </div>
           </div>
         )}
