@@ -157,29 +157,24 @@ export default function HomeTab({
   const [shopsList, setShopsList] = useState([]);
   
   const [isStatOpen, setIsStatOpen] = useState(false);
-
-  // 🌟 DINAMIK USER BONUSI (REALTIME)
   const [userBonus, setUserBonus] = useState(0);
 
   const t = translations[lang] || translations["uz"];
   const currentMonthsList = lang === "ru" ? monthsRu : monthsUz;
 
-  // 🌟 Darajalarni Supabase bonusiga qarab dinamik aniqlash funksiyasi
   const getUserLevel = (bonus) => {
     const points = Number(bonus) || 0;
     if (points >= 102) {
-      return { name: "Master", color: "#8b5cf6", bg: "#ede9fe" }; // Binafsha
+      return { name: "Master", color: "#8b5cf6", bg: "#ede9fe" };
     } else if (points >= 22) {
-      return { name: "Pro", color: "#2563eb", bg: "#dbeafe" };    // Ko'k
+      return { name: "Pro", color: "#2563eb", bg: "#dbeafe" };    
     } else {
-      return { name: "START", color: "#10b981", bg: "#d1fae5" }; // Yashil
+      return { name: "START", color: "#10b981", bg: "#d1fae5" }; 
     }
   };
 
-  // Foydalanuvchining joriy darajasi
   const userLevel = getUserLevel(userBonus);
 
-  // 🔄 REALTIME: Supabase 'profiles' jadvalini kuzatish
   useEffect(() => {
     let activeUserId = userId;
     if (!activeUserId) {
@@ -189,7 +184,6 @@ export default function HomeTab({
 
     if (!activeUserId) return;
 
-    // 1. Dastlabki bonusni bazadan yuklash
     const fetchUserBonus = async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -202,18 +196,17 @@ export default function HomeTab({
       }
     };
 
-    fetchUserBonus();
-
-    // 2. Bazada 'bonus' o'zgarsa (UPDATE), dinamik tarzda UI ni yangilash
+    fetchUserBonus(); 
+    
     const channel = supabase
       .channel(`profile-bonus-changes-${activeUserId}`)
-      .on(
+      .on(      
         "postgres_changes",
-        {
-          event: "UPDATE",
+        { 
+          event: "UPDATE",    
           schema: "public",
-          table: "profiles",
-          filter: `id=eq.${activeUserId}`
+          table: "profiles",     
+          filter: `id=eq.${activeUserId}`  
         },
         (payload) => {
           if (payload.new && payload.new.bonus !== undefined) {
@@ -223,17 +216,16 @@ export default function HomeTab({
       )
       .subscribe();
 
-    return () => {
+    return () => {  
       supabase.removeChannel(channel);
-    };
+    };   
   }, [userId]);
 
-  // DO'KONLARNI YUKLASH
   useEffect(() => {
-    const fetchAllShops = async () => {
+    const fetchAllShops = async () => { 
       try {
         const { data, error } = await supabase
-          .from("shop_settings")
+          .from("stores")
           .select("*")
           .order("created_at", { ascending: false });
 
@@ -246,7 +238,6 @@ export default function HomeTab({
     fetchAllShops();
   }, []);
 
-  // FAOL AKSIYALARNI YUKLASH
   useEffect(() => {
     let isMounted = true;
     const fetchCampaigns = async () => {
@@ -269,7 +260,6 @@ export default function HomeTab({
     return () => { isMounted = false; };
   }, []);
 
-  // YANGILIKLARNI YUKLASH
   useEffect(() => {
     let isMounted = true;
     const fetchNews = async () => {
@@ -289,7 +279,6 @@ export default function HomeTab({
     return () => { isMounted = false; };
   }, []);
 
-  // DINAMIK FILTRLASH VA STATISTIKANI HISOBLASH
   useEffect(() => {
     let isMounted = true;
     const fetchRealStatistics = async () => {
@@ -421,15 +410,13 @@ export default function HomeTab({
       {/* Yuqoridagi ko'rsatkichlar kartasi */}
       <div className="stats-card-container">
         <div className="stats-row">
-          
-          {/* 🌟 Dinamik Daraja (START / Pro / Master) */}
           <div className="inner-stat-box">
             <div className="stat-icon-wrapper" style={{ backgroundColor: userLevel.bg, color: userLevel.color }}>
               <FaTrophy />
             </div>
             <div className="stat-text-wrapper">
               <span className="stat-val-text" style={{ color: userLevel.color }}>{userLevel.name}</span>
-              <span className="stat-lbl-text">{region} (${userBonus})</span>
+              <span className="stat-lbl-text">{region} ({userBonus})</span>
             </div>
           </div>
 
@@ -646,7 +633,6 @@ export default function HomeTab({
       {isStatOpen && (
         <div className="home-modal-overlay" onClick={() => setIsStatOpen(false)} style={{ zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div className="home-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "480px", width: "94%", borderRadius: "24px", overflow: "hidden", padding: 0 }}>
-            
             <div style={{ background: "#f8fafc", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #e2e8f0" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <FaChartBar style={{ color: "#2563eb", fontSize: "20px" }} />
@@ -656,7 +642,6 @@ export default function HomeTab({
             </div>
 
             <div style={{ padding: "20px", background: "#ffffff" }}>
-              
               <div className="filter-section" style={{ marginBottom: "16px" }}>
                 <div className="filter-group">
                   <label className="filter-label">{t.yearLabel}</label>

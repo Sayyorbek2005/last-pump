@@ -467,9 +467,6 @@ export default function CodeGenerator({ lang = "uz" }) {
                     {isGroupPaused ? <FaPlay size={11} /> : <FaPause size={11} />}
                   </button>
 
-                  <button onClick={() => openDeleteModal(batch.ids, false)} className="btn-action-delete">
-                    <FaTrashAlt size={12} />
-                  </button>
                   <button onClick={() => copyGroupToClipboard(batch.ids)} className="btn-action-copy">
                     <FaCopy size={12} />
                   </button>

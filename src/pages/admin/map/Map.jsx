@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { supabase } from "../../../supabase/client"; // Supabase yo'lini tekshiring
+import { supabase } from "../../../supabase/client";
 import { FaStore, FaMapMarkerAlt, FaLink, FaSave, FaCheckCircle, FaExclamationCircle, FaEye } from "react-icons/fa";
-import "./map.css"; // Responsive css fayli
+import "./map.css";
 
 export default function AdminMapSettings() {
   const [title, setTitle] = useState("");
@@ -10,37 +10,48 @@ export default function AdminMapSettings() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
 
-  // 📝 Yandex oddiy havolasini iframe vidjet formatiga o'tkazish funksiyasi
+  // 📝 Ixtiyoriy Yandex havolasini ishlaydigan vidjet formatiga o'tkazish
   const getEmbedUrl = (url) => {
     if (!url) return null;
+    
+    if (url.includes("map-widget") || url.includes("constructor.yandex.ru")) {
+      return url;
+    }
+
     try {
-      if (url.includes("map-widget")) return url;
-      
       const urlObj = new URL(url);
+      const searchParams = urlObj.searchParams;
+      const ll = searchParams.get("ll");
+      const z = searchParams.get("z") || "16";
+
+      if (ll) {
+        return `https://yandex.com/map-widget/v1/?ll=${ll}&z=${z}&l=map`;
+      }
+
       const pathname = urlObj.pathname;
       const search = urlObj.search;
       
-      if (pathname.includes("/org/") || pathname.includes("/maps/")) {
+      if (pathname) {
         return `https://yandex.com/map-widget/v1/${pathname}${search}`;
       }
-      return null;
     } catch (e) {
-      return null;
+      // Xatolikni yutib yuboramiz
     }
+
+    return `https://yandex.com/map-widget/v1/?text=${encodeURIComponent(url)}&z=16`;
   };
 
   const embedUrl = getEmbedUrl(mapLink);
 
-  // 💾 Yangi do'konni bazaga qo'shish funksiyasi
+  // 💾 Bazaga saqlash funksiyasi ("stores" jadvaliga moslandi)
   const handleSave = async (e) => {
     e.preventDefault();
     setLoading(true);
     setStatus({ type: "", message: "" });
 
     try {
-      // 🆕 KO'P DO'KON QO'SHISH UCHUN .insert() ISHLATAMIZ (id berilmaydi, baza o'zi yaratadi)
       const { error } = await supabase
-        .from("shop_settings")
+        .from("stores") // <-- Jadval nomi "stores" ga o'zgartirildi
         .insert([
           {
             title: title,
@@ -55,7 +66,6 @@ export default function AdminMapSettings() {
       
       setStatus({ type: "success", message: "✅ Yangi do'kon muvaffaqiyatli qo'shildi!" });
       
-      // Yangi do'kon qo'shilgandan keyin inputlarni tozalaymiz (keyingi do'konni kiritish uchun)
       setTitle("");
       setAddress("");
       setMapLink("");
@@ -84,7 +94,6 @@ export default function AdminMapSettings() {
 
         <form onSubmit={handleSave} className="admin-map-form">
           
-          {/* 1-INPUT: DO'KON NOMI */}
           <div className="form-group">
             <label className="form-label">
               <FaStore style={{ marginRight: "6px" }} /> Do'kon nomi:
@@ -99,7 +108,6 @@ export default function AdminMapSettings() {
             />
           </div>
 
-          {/* 2-INPUT: DO'KON MANZILI */}
           <div className="form-group">
             <label className="form-label">
               <FaMapMarkerAlt style={{ marginRight: "6px" }} /> Do'kon manzili:
@@ -114,13 +122,12 @@ export default function AdminMapSettings() {
             />
           </div>
 
-          {/* 3-INPUT: YANDEX XARITA LINKI */}
           <div className="form-group">
             <label className="form-label">
               <FaLink style={{ marginRight: "6px" }} /> Yandex Xarita Linki (Havola):
             </label>
             <input
-              type="url"
+              type="text"
               value={mapLink}
               onChange={(e) => setMapLink(e.target.value)}
               placeholder="https://yandex.com/maps/..."
@@ -129,7 +136,6 @@ export default function AdminMapSettings() {
             />
           </div>
 
-          {/* JONLI KARTA KO'RINISHI (PREVIEW) */}
           {embedUrl && (
             <div className="map-preview-box">
               <div className="preview-header">
@@ -147,7 +153,6 @@ export default function AdminMapSettings() {
             </div>
           )}
 
-          {/* SAQLASH TUGMASI */}
           <button type="submit" disabled={loading} className="form-submit-btn">
             <FaSave />
             {loading ? "Qo'shilmoqda..." : "Do'konni ro'yxatga qo'shish"}
